@@ -238,12 +238,12 @@ export default function Dashboard() {
       </div>
 
       {/* Aprender + Nível + Metas — desktop: Metas ligeiramente maior; mobile: 2-col + baixo */}
-      <div className="grid grid-cols-2 min-[700px]:grid-cols-[1fr_1fr_1.5fr] gap-3">
+      <div className="grid grid-cols-2 min-[700px]:grid-cols-[0.7fr_0.7fr_2fr] gap-3">
         <GameBanner totalXp={userProfile.total_xp} completedCourses={completedCourses} compact />
         <LevelBadge totalXp={userProfile.total_xp} level={userProfile.current_level} compact />
 
         {/* Metas de Poupança */}
-        <div className="col-span-2 min-[700px]:col-span-1 bg-white rounded-2xl shadow-sm">
+        <div className="col-span-2 min-[700px]:col-span-1 min-w-0 bg-white rounded-2xl shadow-sm">
           <div className="px-4 pt-4 pb-2">
             <div className="flex items-center justify-between mb-1">
               <Link to={createPageUrl('Goals')} className="flex items-center gap-1 group">
