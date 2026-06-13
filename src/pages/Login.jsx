@@ -43,16 +43,6 @@ export default function Login() {
 
   const switchMode = (m) => { setMode(m); setFeedback(null); setPassword(''); setConfirmPassword(''); };
 
-  // Detect password recovery link click
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setMode('reset');
-        setFeedback(null);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -94,7 +84,7 @@ export default function Login() {
     setFeedback(null);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin,
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) throw error;
       setSuccess('Email enviado! Verifica a tua caixa de entrada e segue as instruções.');
