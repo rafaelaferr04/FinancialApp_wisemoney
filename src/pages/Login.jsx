@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/api/localDb';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,9 +30,10 @@ function Alert({ type, message }) {
 }
 
 export default function Login() {
-  const [mode, setMode] = useState('login'); // 'login' | 'register' | 'recovery'
+  const [mode, setMode] = useState('login'); // 'login' | 'register' | 'recovery' | 'reset'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null); // { type: 'success'|'error', message: string }
@@ -40,7 +41,18 @@ export default function Login() {
   const setError = (msg) => setFeedback({ type: 'error',   message: ERRORS[msg] ?? msg });
   const setSuccess = (msg) => setFeedback({ type: 'success', message: msg });
 
-  const switchMode = (m) => { setMode(m); setFeedback(null); };
+  const switchMode = (m) => { setMode(m); setFeedback(null); setPassword(''); setConfirmPassword(''); };
+
+  // Detect password recovery link click
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setMode('reset');
+        setFeedback(null);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -93,6 +105,26 @@ export default function Login() {
     }
   };
 
+  const handleReset = async (e) => {
+    e.preventDefault();
+    if (password !== confirmPassword) {
+      setError('As passwords não coincidem.');
+      return;
+    }
+    setLoading(true);
+    setFeedback(null);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      setSuccess('Password atualizada! Já podes fazer login.');
+      setTimeout(() => switchMode('login'), 2000);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-800 via-blue-900 to-slate-900 flex flex-col items-center justify-center p-4">
       {/* Hero */}
@@ -107,8 +139,49 @@ export default function Login() {
       {/* Card */}
       <div className="w-full max-w-sm bg-white rounded-3xl shadow-2xl p-8">
 
-        {/* ── RECUPERAÇÃO DE PASSWORD ── */}
-        {mode === 'recovery' ? (
+        {/* ── DEFINIR NOVA PASSWORD ── */}
+        {mode === 'reset' ? (
+          <>
+            <h2 className="text-lg font-bold text-slate-800 mb-1">Nova password</h2>
+            <p className="text-sm text-slate-500 mb-5">
+              Escolhe uma nova password para a tua conta.
+            </p>
+            <form onSubmit={handleReset} className="space-y-4">
+              <div>
+                <Label className="text-slate-700">Nova password</Label>
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="mt-1.5 h-12 rounded-xl border-slate-200"
+                  required
+                  minLength={6}
+                />
+              </div>
+              <div>
+                <Label className="text-slate-700">Confirmar password</Label>
+                <Input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="mt-1.5 h-12 rounded-xl border-slate-200"
+                  required
+                  minLength={6}
+                />
+              </div>
+              <Alert type={feedback?.type} message={feedback?.message} />
+              <Button
+                type="submit"
+                disabled={loading || feedback?.type === 'success'}
+                className="w-full h-12 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-semibold"
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Guardar nova password'}
+              </Button>
+            </form>
+          </>
+        ) : mode === 'recovery' ? (
           <>
             <button
               type="button"
