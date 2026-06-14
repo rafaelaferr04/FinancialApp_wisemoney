@@ -95,6 +95,69 @@ export default function Settings() {
     setIsSaving(false);
   };
 
+  const CATEGORY_LABELS = {
+    food: 'Alimentação', transport: 'Transportes', housing: 'Habitação',
+    utilities: 'Serviços', entertainment: 'Lazer', shopping: 'Compras',
+    health: 'Saúde', education: 'Educação', savings: 'Poupança',
+    salary: 'Salário', freelance: 'Freelance', investment: 'Investimento',
+    gift: 'Presente', other: 'Outro'
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    setExportError('');
+    try {
+      const all = await base44.entities.Transaction.filter({ created_by: user.email });
+      let filtered = all;
+      if (exportFrom) filtered = filtered.filter(t => t.date >= exportFrom);
+      if (exportTo) filtered = filtered.filter(t => t.date <= exportTo);
+      filtered.sort((a, b) => b.date.localeCompare(a.date));
+
+      if (filtered.length === 0) {
+        setExportError('Não há transações no período selecionado.');
+        setIsExporting(false);
+        return;
+      }
+
+      const rows = filtered.map(t => ({
+        'Data': t.date,
+        'Descrição': t.title || '',
+        'Tipo': t.type === 'income' ? 'Receita' : 'Despesa',
+        'Categoria': CATEGORY_LABELS[t.category] || t.category || '',
+        'Valor (€)': t.type === 'expense' ? -Math.abs(t.amount) : Math.abs(t.amount),
+        'Notas': t.notes || ''
+      }));
+
+      const suffix = exportFrom && exportTo ? `${exportFrom}_${exportTo}` : exportFrom || exportTo || 'todas';
+
+      if (exportFormat === 'csv') {
+        const headers = Object.keys(rows[0]);
+        const csvContent = [
+          headers.join(';'),
+          ...rows.map(r => headers.map(h => `"${String(r[h]).replace(/"/g, '""')}"`).join(';'))
+        ].join('\n');
+        const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `wisemoney_transacoes_${suffix}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        const ws = XLSX.utils.json_to_sheet(rows);
+        ws['!cols'] = [{ wch: 12 }, { wch: 32 }, { wch: 10 }, { wch: 16 }, { wch: 12 }, { wch: 28 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Transações');
+        XLSX.writeFile(wb, `wisemoney_transacoes_${suffix}.xlsx`);
+      }
+      setShowExportDialog(false);
+    } catch (err) {
+      setExportError('Erro ao exportar. Tenta de novo.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const settingsGroups = [
     {
       title: 'Conta',
@@ -209,8 +272,23 @@ export default function Settings() {
           </motion.div>
         ))}
 
-        {/* Logout */}
+        {/* Export */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <h3 className="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">Dados</h3>
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
+            <button onClick={() => { setExportError(''); setShowExportDialog(true); }}
+              className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors rounded-2xl">
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-slate-100 p-2"><Download className="h-5 w-5 text-slate-600" /></div>
+                <span className="font-medium text-slate-800">Exportar Transações</span>
+              </div>
+              <ChevronRight className="h-4 w-4 text-slate-400" />
+            </button>
+          </div>
+        </motion.div>
+
+        {/* Logout */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
           <Button onClick={() => base44.auth.logout()} variant="outline"
             className="w-full h-14 rounded-xl border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700">
             <LogOut className="mr-2 h-5 w-5" />
@@ -225,6 +303,59 @@ export default function Settings() {
       </div>
 
       <BankConnectionModal isOpen={showBankModal} onClose={() => setShowBankModal(false)} onConnect={handleConnectBank} />
+
+      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="h-5 w-5 text-blue-700" />
+              Exportar Transações
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-slate-700 text-sm">Data início</Label>
+                <Input type="date" value={exportFrom} onChange={e => setExportFrom(e.target.value)}
+                  className="mt-1.5 h-11 rounded-xl" />
+              </div>
+              <div>
+                <Label className="text-slate-700 text-sm">Data fim</Label>
+                <Input type="date" value={exportTo} onChange={e => setExportTo(e.target.value)}
+                  className="mt-1.5 h-11 rounded-xl" />
+              </div>
+            </div>
+            <p className="text-xs text-slate-400">Deixa em branco para exportar todas as transações.</p>
+
+            <div>
+              <Label className="text-slate-700 text-sm">Formato</Label>
+              <div className="grid grid-cols-2 gap-2 mt-1.5">
+                {[{ id: 'xlsx', label: 'Excel (.xlsx)' }, { id: 'csv', label: 'CSV (.csv)' }].map(f => (
+                  <button key={f.id} type="button" onClick={() => setExportFormat(f.id)}
+                    className={`h-11 rounded-xl border text-sm font-medium transition-all ${
+                      exportFormat === f.id
+                        ? 'bg-blue-700 text-white border-blue-700'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
+                    }`}>
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {exportError && (
+              <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{exportError}</p>
+            )}
+
+            <Button onClick={handleExport} disabled={isExporting}
+              className="w-full h-12 rounded-xl bg-blue-700 hover:bg-blue-800 text-white font-semibold">
+              {isExporting
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />A exportar...</>
+                : <><Download className="mr-2 h-4 w-4" />Exportar</>}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showBudgetDialog} onOpenChange={setShowBudgetDialog}>
         <DialogContent className="sm:max-w-md">
