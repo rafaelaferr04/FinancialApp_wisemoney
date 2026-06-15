@@ -163,16 +163,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-4">
-      <DashboardHero
-        userName={user?.full_name}
-        streak={userProfile.streak_days}
-        totalBalance={totalBalance}
-        monthlyIncome={monthlyIncome}
-        monthlyExpenses={monthlyExpenses}
-        monthlySavings={monthlySavings}
-        monthlyBudget={userProfile.monthly_budget || 0}
-      />
-
       {motivationMsgs.length > 0 && (
         <div
           onClick={() => {
@@ -183,12 +173,22 @@ export default function Dashboard() {
               setMotivationVisible(true);
             }, 300);
           }}
-          className={`cursor-pointer flex items-center gap-2 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-600/65 to-indigo-700/65 backdrop-blur-sm select-none transition-opacity duration-300 w-fit max-w-sm mx-auto ${motivationVisible ? 'opacity-100' : 'opacity-0'}`}
+          className={`cursor-pointer flex items-center justify-center gap-1.5 -mt-2 -mb-2 select-none transition-opacity duration-300 ${motivationVisible ? 'opacity-100' : 'opacity-0'}`}
         >
-          <span className="text-xs shrink-0">✨</span>
-          <p className="text-xs text-white italic leading-snug [text-shadow:0_1px_4px_rgba(0,0,0,0.5)]">{motivationMsgs[motivationIdx]}</p>
+          <span className="text-sm">✨</span>
+          <p className="text-xs text-slate-400 italic leading-snug">{motivationMsgs[motivationIdx]}</p>
         </div>
       )}
+
+      <DashboardHero
+        userName={user?.full_name}
+        streak={userProfile.streak_days}
+        totalBalance={totalBalance}
+        monthlyIncome={monthlyIncome}
+        monthlyExpenses={monthlyExpenses}
+        monthlySavings={monthlySavings}
+        monthlyBudget={userProfile.monthly_budget || 0}
+      />
 
       <BankIntegrationBanner onConnect={() => setShowBankModal(true)} isConnected={userProfile?.bank_connected} />
 
