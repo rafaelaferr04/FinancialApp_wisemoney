@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import BankConnectionModal from '../components/settings/BankConnectionModal';
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function Settings() {
   const [user, setUser] = useState(null);
@@ -145,6 +147,25 @@ export default function Settings() {
         a.download = `wisemoney_transacoes_${suffix}.csv`;
         a.click();
         URL.revokeObjectURL(url);
+      } else if (exportFormat === 'pdf') {
+        const doc = new jsPDF();
+        doc.setFontSize(16);
+        doc.setTextColor(30, 58, 138);
+        doc.text('WiseMoney — Transações', 14, 16);
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        doc.text(`Exportado em ${new Date().toLocaleDateString('pt-PT')}${exportFrom || exportTo ? `  |  Período: ${exportFrom ? fmtDate(exportFrom) : '—'} a ${exportTo ? fmtDate(exportTo) : '—'}` : ''}`, 14, 23);
+        autoTable(doc, {
+          startY: 28,
+          head: [['Data', 'Descrição', 'Tipo', 'Categoria', 'Valor (€)', 'Notas']],
+          body: rows.map(r => Object.values(r)),
+          headStyles: { fillColor: [30, 58, 138], fontSize: 8, fontStyle: 'bold' },
+          bodyStyles: { fontSize: 8 },
+          alternateRowStyles: { fillColor: [241, 245, 249] },
+          columnStyles: { 4: { halign: 'right' } },
+          margin: { left: 14, right: 14 },
+        });
+        doc.save(`wisemoney_transacoes_${suffix}.pdf`);
       } else {
         const ws = XLSX.utils.json_to_sheet(rows);
         ws['!cols'] = [{ wch: 12 }, { wch: 32 }, { wch: 10 }, { wch: 16 }, { wch: 12 }, { wch: 28 }];
@@ -329,8 +350,8 @@ export default function Settings() {
 
             <div>
               <Label className="text-slate-700 text-sm">Formato</Label>
-              <div className="grid grid-cols-2 gap-2 mt-1.5">
-                {[{ id: 'xlsx', label: 'Excel (.xlsx)' }, { id: 'csv', label: 'CSV (.csv)' }].map(f => (
+              <div className="grid grid-cols-3 gap-2 mt-1.5">
+                {[{ id: 'xlsx', label: 'Excel (.xlsx)' }, { id: 'csv', label: 'CSV (.csv)' }, { id: 'pdf', label: 'PDF (.pdf)' }].map(f => (
                   <button key={f.id} type="button" onClick={() => setExportFormat(f.id)}
                     className={`h-11 rounded-xl border text-sm font-medium transition-all ${
                       exportFormat === f.id

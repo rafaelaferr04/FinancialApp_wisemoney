@@ -52,7 +52,7 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    const cached = localStorage.getItem('motivation_cache_v2');
+    const cached = localStorage.getItem('motivation_cache_v3');
     if (cached) {
       const { msgs, timestamp } = JSON.parse(cached);
       if ((Date.now() - timestamp) < 6 * 60 * 60 * 1000 && msgs?.length > 0) {
@@ -61,7 +61,7 @@ export default function Dashboard() {
       }
     }
     base44.integrations.Core.InvokeLLM({
-      prompt: 'Gera 4 frases motivacionais curtas (máximo 12 palavras cada) sobre finanças ou poupança. Responde apenas com as 4 frases separadas pelo caractere |, sem numeração nem aspas.',
+      prompt: 'Gera 4 frases motivacionais sobre finanças ou poupança, cada uma entre 4 e 12 palavras. Responde apenas com as 4 frases separadas pelo caractere |, sem numeração nem aspas.',
       system: 'Responde em português de Portugal. Máximo 12 palavras por frase. Sê positivo e encorajador.'
     }).then(result => {
       const clean = typeof result === 'string' ? result.trim() : '';
@@ -69,7 +69,7 @@ export default function Dashboard() {
         const msgs = clean.split('|').map(m => m.trim()).filter(m => m.length > 0);
         if (msgs.length > 0) {
           setMotivationMsgs(msgs);
-          localStorage.setItem('motivation_cache_v2', JSON.stringify({ msgs, timestamp: Date.now() }));
+          localStorage.setItem('motivation_cache_v3', JSON.stringify({ msgs, timestamp: Date.now() }));
         }
       }
     }).catch(() => {});
