@@ -69,7 +69,7 @@ export default function ChatBubble() {
         onClick={() => setOpen(v => !v)}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        className="fixed bottom-20 right-3 md:bottom-6 md:right-6 z-50 w-12 h-12 md:w-14 md:h-14 rounded-full bg-blue-900 hover:bg-blue-950 text-white shadow-xl shadow-blue-900/40 flex items-center justify-center transition-colors"
+        className="fixed bottom-20 right-3 md:bottom-6 md:right-6 z-[35] w-12 h-12 md:w-14 md:h-14 rounded-full bg-blue-900 hover:bg-blue-950 text-white shadow-xl shadow-blue-900/40 flex items-center justify-center transition-colors"
         title="Finny — Assistente Financeiro"
       >
         <AnimatePresence mode="wait">
@@ -88,7 +88,7 @@ export default function ChatBubble() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed bottom-[8.5rem] right-4 md:bottom-24 md:right-6 z-50 w-[340px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden"
+            className="fixed bottom-[8.5rem] right-4 md:bottom-24 md:right-6 z-[35] w-[340px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-slate-100 flex flex-col overflow-hidden"
             style={{ height: 'min(460px, calc(100dvh - 12rem))' }}
           >
             {/* Header */}

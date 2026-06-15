@@ -155,24 +155,22 @@ export default function AddTransactionSheet({ isOpen, onClose, onSave }) {
           >
             <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-slate-200" />
             
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-slate-800">
-                {view === 'form' ? 'Adicionar Transação' : 'Importar Ficheiro'}
-              </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-slate-800">Adicionar Transação</h2>
               <button onClick={onClose} className="rounded-full p-2 hover:bg-slate-100">
                 <X className="h-5 w-5 text-slate-500" />
               </button>
             </div>
 
-            {/* View Toggle */}
-            <div className="flex gap-2 p-1 rounded-xl bg-slate-100 mb-6">
+            {/* View Toggle — underline tabs */}
+            <div className="flex justify-center gap-10 border-b border-slate-200 mb-5">
               <button
                 type="button"
                 onClick={() => setView('form')}
-                className={`flex-1 py-2.5 rounded-lg font-medium text-sm transition-all ${
-                  view === 'form' 
-                    ? 'bg-white text-slate-800 shadow-sm' 
-                    : 'text-slate-500'
+                className={`flex items-center gap-1.5 px-1 pb-3 text-base font-medium border-b-2 -mb-px transition-all ${
+                  view === 'form'
+                    ? 'border-blue-700 text-blue-700'
+                    : 'border-transparent text-slate-400 hover:text-slate-600'
                 }`}
               >
                 Manual
@@ -180,10 +178,10 @@ export default function AddTransactionSheet({ isOpen, onClose, onSave }) {
               <button
                 type="button"
                 onClick={() => setView('import')}
-                className={`flex-1 py-2.5 rounded-lg font-medium text-sm transition-all flex items-center justify-center gap-2 ${
-                  view === 'import' 
-                    ? 'bg-white text-slate-800 shadow-sm' 
-                    : 'text-slate-500'
+                className={`flex items-center gap-1.5 px-1 pb-3 text-base font-medium border-b-2 -mb-px transition-all ${
+                  view === 'import'
+                    ? 'border-blue-700 text-blue-700'
+                    : 'border-transparent text-slate-400 hover:text-slate-600'
                 }`}
               >
                 <FileUp className="h-4 w-4" />
@@ -244,31 +242,33 @@ export default function AddTransactionSheet({ isOpen, onClose, onSave }) {
             ) : (
               <>
                 {/* Type Toggle */}
-                <div className="flex gap-2 p-1 rounded-xl bg-slate-100 mb-6">
-                  <button
-                    type="button"
-                    onClick={() => { setType('expense'); setFormData({...formData, category: ''}); }}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition-all ${
-                      type === 'expense' 
-                        ? 'bg-white text-rose-600 shadow-sm' 
-                        : 'text-slate-500'
-                    }`}
-                  >
-                    <Minus className="h-4 w-4" />
-                    Despesa
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setType('income'); setFormData({...formData, category: ''}); }}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition-all ${
-                      type === 'income' 
-                        ? 'bg-white text-emerald-600 shadow-sm' 
-                        : 'text-slate-500'
-                    }`}
-                  >
-                    <Plus className="h-4 w-4" />
-                    Receita
-                  </button>
+                <div className="flex justify-center mb-5">
+                  <div className="flex gap-1.5 p-1 rounded-xl bg-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => { setType('expense'); setFormData({...formData, category: ''}); }}
+                      className={`flex items-center gap-1.5 px-8 py-2 rounded-lg text-sm font-medium transition-all ${
+                        type === 'expense'
+                          ? 'bg-white text-rose-600 shadow-sm'
+                          : 'text-slate-500'
+                      }`}
+                    >
+                      <Minus className="h-3.5 w-3.5" />
+                      Despesa
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setType('income'); setFormData({...formData, category: ''}); }}
+                      className={`flex items-center gap-1.5 px-8 py-2 rounded-lg text-sm font-medium transition-all ${
+                        type === 'income'
+                          ? 'bg-white text-emerald-600 shadow-sm'
+                          : 'text-slate-500'
+                      }`}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Receita
+                    </button>
+                  </div>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -344,17 +344,19 @@ export default function AddTransactionSheet({ isOpen, onClose, onSave }) {
                 />
               </div>
 
-                  <Button 
-                    type="submit"
-                    disabled={isSubmitting}
-                    className={`w-full h-14 rounded-xl text-lg font-semibold ${
-                      type === 'income' 
-                        ? 'bg-emerald-600 hover:bg-emerald-700' 
-                        : 'bg-rose-600 hover:bg-rose-700'
-                    }`}
-                  >
-                    {isSubmitting ? 'A guardar...' : `Adicionar ${type === 'income' ? 'Receita' : 'Despesa'}`}
-                  </Button>
+                  <div className="flex justify-center">
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className={`px-12 h-[52px] rounded-xl text-base font-semibold ${
+                        type === 'income'
+                          ? 'bg-emerald-600 hover:bg-emerald-700'
+                          : 'bg-rose-600 hover:bg-rose-700'
+                      }`}
+                    >
+                      {isSubmitting ? 'A guardar...' : `Adicionar ${type === 'income' ? 'Receita' : 'Despesa'}`}
+                    </Button>
+                  </div>
                 </form>
               </>
             )}
