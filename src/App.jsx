@@ -3,7 +3,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { PlanProvider, usePlan } from '@/lib/PlanContext';
@@ -11,6 +11,16 @@ import SmartHome from '@/components/SmartHome';
 import Login from '@/pages/Login';
 import ResetPassword from '@/pages/ResetPassword';
 import PlanSelection from '@/pages/PlanSelection';
+import Settings from '@/pages/Settings';
+
+// Business imports
+import BusinessLayout from '@/components/business/BusinessLayout';
+import BusinessDashboard from '@/pages/business/BusinessDashboard';
+import BusinessTransactions from '@/pages/business/BusinessTransactions';
+import BusinessKPIs from '@/pages/business/BusinessKPIs';
+import BusinessStats from '@/pages/business/BusinessStats';
+import BusinessEmployees from '@/pages/business/BusinessEmployees';
+import BusinessAchievements from '@/pages/business/BusinessAchievements';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -20,8 +30,25 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
 
+const BL = ({ children }) => <BusinessLayout>{children}</BusinessLayout>;
+
+const BusinessRoutes = () => (
+  <Routes>
+    <Route index element={<Navigate to="/BusinessDashboard" replace />} />
+    <Route path="/BusinessDashboard"   element={<BL><BusinessDashboard /></BL>} />
+    <Route path="/BusinessTransactions" element={<BL><BusinessTransactions /></BL>} />
+    <Route path="/BusinessKPIs"        element={<BL><BusinessKPIs /></BL>} />
+    <Route path="/BusinessStats"       element={<BL><BusinessStats /></BL>} />
+    <Route path="/BusinessEmployees"   element={<BL><BusinessEmployees /></BL>} />
+    <Route path="/BusinessAchievements" element={<BL><BusinessAchievements /></BL>} />
+    <Route path="/Settings"            element={<BL><Settings /></BL>} />
+    <Route path="/PlanSelection"       element={<PlanSelection />} />
+    <Route path="*"                    element={<Navigate to="/BusinessDashboard" replace />} />
+  </Routes>
+);
+
 const PlanGate = () => {
-  const { planLoading, needsPlanSelection } = usePlan();
+  const { planLoading, needsPlanSelection, isBusiness } = usePlan();
 
   if (planLoading) {
     return (
@@ -33,6 +60,10 @@ const PlanGate = () => {
 
   if (needsPlanSelection) {
     return <PlanSelection />;
+  }
+
+  if (isBusiness) {
+    return <BusinessRoutes />;
   }
 
   return (

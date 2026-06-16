@@ -6,12 +6,16 @@ export const supabase = createClient(
 );
 
 const TABLE_MAP = {
-  Transaction:    'transactions',
-  SavingsGoal:    'savings_goals',
-  UserProfile:    'user_profiles',
-  CourseProgress: 'course_progress',
-  ChatMessage:    'chat_messages',
-  Achievement:    'achievements',
+  Transaction:         'transactions',
+  SavingsGoal:         'savings_goals',
+  UserProfile:         'user_profiles',
+  CourseProgress:      'course_progress',
+  ChatMessage:         'chat_messages',
+  Achievement:         'achievements',
+  BusinessTransaction: 'business_transactions',
+  BusinessKPI:         'business_kpis',
+  Department:          'departments',
+  Employee:            'employees',
 };
 
 async function getCurrentEmail() {

@@ -25,12 +25,16 @@ export const base44 = {
   },
 
   entities: {
-    Transaction:    createEntityManager('Transaction'),
-    SavingsGoal:    createEntityManager('SavingsGoal'),
-    UserProfile:    createEntityManager('UserProfile'),
-    CourseProgress: createEntityManager('CourseProgress'),
-    ChatMessage:    createEntityManager('ChatMessage'),
-    Achievement:    createEntityManager('Achievement'),
+    Transaction:         createEntityManager('Transaction'),
+    SavingsGoal:         createEntityManager('SavingsGoal'),
+    UserProfile:         createEntityManager('UserProfile'),
+    CourseProgress:      createEntityManager('CourseProgress'),
+    ChatMessage:         createEntityManager('ChatMessage'),
+    Achievement:         createEntityManager('Achievement'),
+    BusinessTransaction: createEntityManager('BusinessTransaction'),
+    BusinessKPI:         createEntityManager('BusinessKPI'),
+    Department:          createEntityManager('Department'),
+    Employee:            createEntityManager('Employee'),
   },
 
   appLogs: {
