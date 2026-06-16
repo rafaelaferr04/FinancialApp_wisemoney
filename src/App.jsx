@@ -6,9 +6,11 @@ import { pagesConfig } from './pages.config'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
+import { PlanProvider, usePlan } from '@/lib/PlanContext';
 import SmartHome from '@/components/SmartHome';
 import Login from '@/pages/Login';
 import ResetPassword from '@/pages/ResetPassword';
+import PlanSelection from '@/pages/PlanSelection';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -18,19 +20,19 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout ?
   <Layout currentPageName={currentPageName}>{children}</Layout>
   : <>{children}</>;
 
-const AuthenticatedApp = () => {
-  const { isLoadingAuth, isAuthenticated } = useAuth();
+const PlanGate = () => {
+  const { planLoading, needsPlanSelection } = usePlan();
 
-  if (isLoadingAuth) {
+  if (planLoading) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin" />
+      <div className="fixed inset-0 flex items-center justify-center bg-white">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-700 rounded-full animate-spin" />
       </div>
     );
   }
 
-  if (!isAuthenticated) {
-    return <Login />;
+  if (needsPlanSelection) {
+    return <PlanSelection />;
   }
 
   return (
@@ -47,8 +49,31 @@ const AuthenticatedApp = () => {
           }
         />
       ))}
+      <Route path="/PlanSelection" element={<PlanSelection />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
+  );
+};
+
+const AuthenticatedApp = () => {
+  const { isLoadingAuth, isAuthenticated } = useAuth();
+
+  if (isLoadingAuth) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-blue-700 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
+  return (
+    <PlanProvider>
+      <PlanGate />
+    </PlanProvider>
   );
 };
 

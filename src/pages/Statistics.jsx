@@ -1,11 +1,33 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, BarChart2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, BarChart2, Lock } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, AreaChart, Area, LineChart, Line } from 'recharts';
 import { format, subMonths, startOfMonth, endOfMonth, subDays, subWeeks, subYears } from 'date-fns';
 import { pt } from 'date-fns/locale';
+import { usePlan } from '@/lib/PlanContext';
+import { useNavigate } from 'react-router-dom';
+
+function LockedChart({ locked, children }) {
+  const navigate = useNavigate();
+  if (!locked) return children;
+  return (
+    <div className="relative h-44">
+      <div className="h-44 blur-[3px] pointer-events-none select-none opacity-40">{children}</div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+        <div className="w-11 h-11 rounded-full bg-blue-700 flex items-center justify-center shadow-lg">
+          <Lock className="w-5 h-5 text-white" />
+        </div>
+        <p className="text-xs font-semibold text-slate-700">Bloqueado no Teste Gratuito</p>
+        <button onClick={() => navigate('/PlanSelection')}
+          className="mt-1 px-4 py-1.5 bg-blue-700 hover:bg-blue-800 text-white text-xs font-semibold rounded-full transition-colors">
+          Ver planos
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const COLORS = ['#1d4ed8', '#3b82f6', '#06b6d4', '#ec4899', '#10b981', '#f97316', '#8b5cf6', '#ef4444'];
 
@@ -22,6 +44,7 @@ const toDateStr = (date) => format(date, 'yyyy-MM-dd');
 export default function Statistics() {
   const [period, setPeriod] = useState('month');
   const [user, setUser] = useState(null);
+  const { isFreeTrial } = usePlan();
 
   useEffect(() => { base44.auth.me().then(setUser); }, []);
 
@@ -258,32 +281,36 @@ export default function Statistics() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl bg-white p-5 shadow-sm border border-slate-100">
           <div className="flex items-center gap-2.5 mb-4"><div className="w-1 h-4 rounded-full bg-rose-500" /><h3 className="font-semibold text-slate-800 text-sm">Tendência de Gastos</h3></div>
-          <div className="h-44">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={spendingTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `€${v}`} width={50} />
-                <Tooltip formatter={(value) => [`€${value.toLocaleString('pt-PT')}`, 'Gastos']} />
-                <Area type="monotone" dataKey="value" stroke="#ef4444" fill="#ef4444" fillOpacity={0.15} strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          <LockedChart locked={isFreeTrial}>
+            <div className="h-44">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={spendingTrend}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `€${v}`} width={50} />
+                  <Tooltip formatter={(value) => [`€${value.toLocaleString('pt-PT')}`, 'Gastos']} />
+                  <Area type="monotone" dataKey="value" stroke="#ef4444" fill="#ef4444" fillOpacity={0.15} strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </LockedChart>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl bg-white p-5 shadow-sm border border-slate-100">
           <div className="flex items-center gap-2.5 mb-4"><div className="w-1 h-4 rounded-full bg-blue-700" /><h3 className="font-semibold text-slate-800 text-sm">Evolução do Saldo</h3></div>
-          <div className="h-44">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={balanceEvolution}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `€${v}`} width={50} />
-                <Tooltip formatter={(value) => [`€${value.toLocaleString('pt-PT')}`, 'Saldo']} />
-                <Line type="monotone" dataKey="saldo" stroke="#1d4ed8" strokeWidth={2.5} dot={{ fill: '#1d4ed8', r: 3 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          <LockedChart locked={isFreeTrial}>
+            <div className="h-44">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={balanceEvolution}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `€${v}`} width={50} />
+                  <Tooltip formatter={(value) => [`€${value.toLocaleString('pt-PT')}`, 'Saldo']} />
+                  <Line type="monotone" dataKey="saldo" stroke="#1d4ed8" strokeWidth={2.5} dot={{ fill: '#1d4ed8', r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </LockedChart>
         </motion.div>
       </div>
 
@@ -291,24 +318,28 @@ export default function Statistics() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl bg-white p-5 shadow-sm border border-slate-100">
           <div className="flex items-center gap-2.5 mb-4"><div className="w-1 h-4 rounded-full bg-blue-500" /><h3 className="font-semibold text-slate-800 text-sm">Receitas vs Despesas</h3></div>
-          <div className="h-44">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={timeChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `€${v}`} width={50} />
-                <Tooltip formatter={(value) => [`€${value.toLocaleString('pt-PT')}`, '']} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="receitas" name="Receitas" fill="#10b981" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="despesas" name="Despesas" fill="#ef4444" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <LockedChart locked={isFreeTrial}>
+            <div className="h-44">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={timeChartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `€${v}`} width={50} />
+                  <Tooltip formatter={(value) => [`€${value.toLocaleString('pt-PT')}`, '']} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="receitas" name="Receitas" fill="#10b981" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="despesas" name="Despesas" fill="#ef4444" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </LockedChart>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl bg-white p-5 shadow-sm border border-slate-100">
           <div className="flex items-center gap-2.5 mb-4"><div className="w-1 h-4 rounded-full bg-indigo-500" /><h3 className="font-semibold text-slate-800 text-sm">Despesas por Categoria</h3></div>
-          {pieChartData.length > 0 ? (
+          {isFreeTrial ? (
+            <LockedChart locked={true}><div className="h-44" /></LockedChart>
+          ) : pieChartData.length > 0 ? (
             <div className="flex items-center gap-3">
               <div className="w-32 h-32 shrink-0">
                 <ResponsiveContainer width="100%" height="100%">
@@ -326,6 +357,7 @@ export default function Statistics() {
             </div>
           ) : <p className="text-center text-slate-500 py-6 text-sm">Sem despesas</p>}
         </motion.div>
+
       </div>
 
       {/* Row 3: Income by Category + Maiores Despesas */}

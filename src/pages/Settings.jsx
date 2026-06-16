@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Bell, Target, Wallet, LogOut, ChevronRight, Save, Loader2, Building2, XCircle, Download, FileSpreadsheet } from 'lucide-react';
+import { User, Bell, Target, Wallet, LogOut, ChevronRight, Save, Loader2, Building2, XCircle, Download, FileSpreadsheet, Crown } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { usePlan, PLAN_INFO } from '@/lib/PlanContext';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +18,9 @@ import autoTable from 'jspdf-autotable';
 
 export default function Settings() {
   const [user, setUser] = useState(null);
+  const navigate = useNavigate();
+  const { plan, profile: planProfile } = usePlan();
+  const planInfo = PLAN_INFO[plan] || null;
   const [showBudgetDialog, setShowBudgetDialog] = useState(false);
   const [showBankModal, setShowBankModal] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -294,6 +299,37 @@ export default function Settings() {
             </div>
           </motion.div>
         ))}
+
+        {/* Plano activo */}
+        {planInfo && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+            <h3 className="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">Subscrição</h3>
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`rounded-xl p-2 ${plan === 'free_trial' ? 'bg-slate-100' : plan === 'premium' ? 'bg-blue-100' : plan === 'premium_plus' ? 'bg-violet-100' : 'bg-amber-100'}`}>
+                    <Crown className={`h-5 w-5 ${plan === 'free_trial' ? 'text-slate-600' : plan === 'premium' ? 'text-blue-700' : plan === 'premium_plus' ? 'text-violet-700' : 'text-amber-600'}`} />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-800">{planInfo.name}</p>
+                    <p className="text-xs text-slate-400">
+                      {planInfo.price ? `€${planInfo.price}/mês` : 'Grátis por 2 meses'}
+                      {planProfile?.plan_started_at && ` · desde ${new Date(planProfile.plan_started_at + 'T12:00:00').toLocaleDateString('pt-PT')}`}
+                    </p>
+                  </div>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${plan === 'free_trial' ? 'bg-slate-100 text-slate-600' : plan === 'premium' ? 'bg-blue-100 text-blue-700' : plan === 'premium_plus' ? 'bg-violet-100 text-violet-700' : 'bg-amber-100 text-amber-700'}`}>
+                  {planInfo.badge}
+                </span>
+              </div>
+              <button onClick={() => navigate('/PlanSelection')}
+                className="w-full py-2.5 rounded-xl border border-blue-200 text-blue-700 text-sm font-medium hover:bg-blue-50 transition-colors flex items-center justify-center gap-2">
+                <ChevronRight className="w-4 h-4" />
+                Mudar Plano
+              </button>
+            </div>
+          </motion.div>
+        )}
 
         {/* Export */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>

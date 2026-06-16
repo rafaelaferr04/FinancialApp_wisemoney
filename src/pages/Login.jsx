@@ -70,6 +70,8 @@ export default function Login() {
         options: { data: { full_name: name } },
       });
       if (error) throw error;
+      // Flag para mostrar selecção de plano após o primeiro login
+      localStorage.setItem('wisemoney_show_plans', 'true');
       setSuccess('Conta criada! Verifica o teu email e clica no link de confirmação antes de entrar.');
     } catch (err) {
       setError(err.message);
