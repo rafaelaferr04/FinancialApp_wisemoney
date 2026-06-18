@@ -204,13 +204,11 @@ export default function Settings() {
   };
 
   const settingsGroups = [
-    {
-      title: 'Conta',
-      items: [{ icon: User, label: 'Perfil', value: user?.full_name || user?.email || 'A carregar...', disabled: true }]
-    },
     ...(!isBusiness ? [
       {
         title: 'Configurações Financeiras',
+        gridItems: true,
+        colSpan: 2,
         items: [
           { icon: Wallet, label: 'Orçamento Mensal', value: userProfile?.monthly_budget ? `€${userProfile.monthly_budget.toLocaleString('pt-PT')}` : 'Não definido', onClick: () => { setBudgetInput(userProfile?.monthly_budget?.toString() || ''); setShowBudgetDialog(true); } },
           { icon: Target, label: 'Objetivo Financeiro', value: userProfile?.financial_goal?.replace('_', ' ') || 'Não definido', isSelect: true, options: [{ value: 'save_more', label: 'Poupar Mais' }, { value: 'reduce_debt', label: 'Reduzir Dívidas' }, { value: 'invest', label: 'Começar a Investir' }, { value: 'emergency_fund', label: 'Criar Fundo de Emergência' }, { value: 'retirement', label: 'Planear Reforma' }], onSelect: handleUpdateGoal }
@@ -245,10 +243,11 @@ export default function Settings() {
 
       {/* Settings groups */}
       <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
         {settingsGroups.map((group, gi) => (
-          <motion.div key={group.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: gi * 0.1 }}>
+          <motion.div key={group.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: gi * 0.1 }} className={group.colSpan === 2 ? 'md:col-span-2' : ''}>
             <h3 className="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">{group.title}</h3>
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 divide-y divide-slate-100">
+            <div className={`bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden ${group.gridItems ? 'grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100' : 'divide-y divide-slate-100'}`}>
               {group.items.map((item) => {
                 const Icon = item.icon;
 
@@ -266,17 +265,17 @@ export default function Settings() {
 
                 if (item.isSelect) {
                   return (
-                    <div key={item.label} className="p-4">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="rounded-xl bg-slate-100 p-2"><Icon className="h-5 w-5 text-slate-600" /></div>
-                        <span className="font-medium text-slate-800">{item.label}</span>
+                    <div key={item.label} className="p-4 flex items-center gap-3">
+                      <div className="rounded-xl bg-slate-100 p-2 shrink-0"><Icon className="h-5 w-5 text-slate-600" /></div>
+                      <span className="font-medium text-slate-800 text-sm shrink-0">{item.label}</span>
+                      <div className="flex-1 min-w-0">
+                        <Select value={userProfile?.financial_goal || ''} onValueChange={item.onSelect} disabled={isSaving}>
+                          <SelectTrigger className="h-10 rounded-xl text-sm"><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                          <SelectContent>
+                            {item.options.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <Select value={userProfile?.financial_goal || ''} onValueChange={item.onSelect} disabled={isSaving}>
-                        <SelectTrigger className="h-12 rounded-xl"><SelectValue placeholder="Selecionar objetivo" /></SelectTrigger>
-                        <SelectContent>
-                          {item.options.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
                     </div>
                   );
                 }
@@ -335,7 +334,10 @@ export default function Settings() {
             </div>
           </motion.div>
         ))}
+        </div>
 
+        {/* Subscrição + Dados lado a lado */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
         {/* Plano activo */}
         {planInfo && (() => {
           const fmtRenewal = renewalDate
@@ -414,7 +416,8 @@ export default function Settings() {
         {isBusiness && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
             <h3 className="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">Recursos Business</h3>
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 divide-y divide-slate-100">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+              <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100">
 
               {/* API Access */}
               <div className="p-4">
@@ -459,11 +462,12 @@ export default function Settings() {
                 <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
               </button>
 
+              </div>
             </div>
           </motion.div>
         )}
 
-        {/* Export */}
+        {/* Dados — segunda célula da grelha Subscrição+Dados */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <h3 className="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">Dados</h3>
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
@@ -492,6 +496,7 @@ export default function Settings() {
             )}
           </div>
         </motion.div>
+        </div>
 
         {/* Logout */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>

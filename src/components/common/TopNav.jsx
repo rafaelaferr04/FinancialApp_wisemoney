@@ -28,14 +28,14 @@ export default function TopNav() {
   return (
     <header className="sticky top-0 z-40 bg-blue-900 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center h-16 gap-6">
+        <div className="flex items-center h-16 gap-2 sm:gap-4 min-[800px]:gap-6">
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5 shrink-0">
             <img src={logoImg} alt="WiseMoney" className="h-8 w-8 rounded-lg object-cover" />
             <div className="leading-none">
               <span className="text-white font-bold text-base tracking-tight block">WiseMoney</span>
-              <span className="text-blue-300 text-[10px] font-medium tracking-wide hidden sm:block">A Tua Jornada Financeira</span>
+              <span className="text-blue-300 text-[10px] font-medium tracking-wide hidden min-[800px]:block">A Tua Jornada Financeira</span>
             </div>
           </Link>
 
@@ -55,8 +55,11 @@ export default function TopNav() {
             })}
           </nav>
 
+          {/* Spacer: absorbs middle space when nav is hidden */}
+          <div className="flex-1 min-[800px]:hidden" />
+
           {/* Right side: Statistics, Achievements, User */}
-          <div className="flex items-center gap-1 ml-auto">
+          <div className="flex items-center gap-1 shrink-0">
 
             {/* Statistics icon */}
             <Link to={createPageUrl('Statistics')} title="Estatísticas"
@@ -77,7 +80,7 @@ export default function TopNav() {
                 <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold shrink-0">
                   {initials}
                 </div>
-                <span className="hidden sm:block max-w-[90px] truncate">{firstName}</span>
+                <span className="hidden min-[800px]:block max-w-[90px] truncate">{firstName}</span>
                 <ChevronDown className="w-3.5 h-3.5 shrink-0" />
               </button>
 
