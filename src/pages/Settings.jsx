@@ -243,7 +243,7 @@ export default function Settings() {
 
       {/* Settings groups */}
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        <div className={isBusiness ? "space-y-6" : "grid grid-cols-1 md:grid-cols-2 gap-6 items-start"}>
         {settingsGroups.map((group, gi) => (
           <motion.div key={group.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: gi * 0.1 }} className={group.colSpan === 2 ? 'md:col-span-2' : ''}>
             <h3 className="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">{group.title}</h3>
@@ -337,7 +337,7 @@ export default function Settings() {
         </div>
 
         {/* Subscrição + Dados lado a lado */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        <div className={isBusiness ? "space-y-6" : "grid grid-cols-1 md:grid-cols-2 gap-6 items-start"}>
         {/* Plano activo */}
         {planInfo && (() => {
           const fmtRenewal = renewalDate
