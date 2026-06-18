@@ -412,61 +412,6 @@ export default function Settings() {
           );
         })()}
 
-        {/* Business Resources */}
-        {isBusiness && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
-            <h3 className="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">Recursos Business</h3>
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-              <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100">
-
-              {/* API Access */}
-              <div className="p-4">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="rounded-xl bg-amber-100 p-2"><Code2 className="h-5 w-5 text-amber-700" /></div>
-                  <div>
-                    <p className="font-medium text-slate-800">Acesso API</p>
-                    <p className="text-xs text-slate-400">Integra o WiseMoney nos teus sistemas</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5">
-                  <code className="flex-1 text-xs text-slate-600 font-mono truncate">{apiKey}</code>
-                  <button onClick={handleCopyApiKey} className="shrink-0 text-slate-400 hover:text-amber-600 transition-colors">
-                    {apiKeyCopied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Support 24/7 */}
-              <button onClick={() => setShowSupportDialog(true)}
-                className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-amber-100 p-2"><HeadphonesIcon className="h-5 w-5 text-amber-700" /></div>
-                  <div className="text-left">
-                    <p className="font-medium text-slate-800">Suporte Dedicado 24/7</p>
-                    <p className="text-xs text-slate-400">Fala com a nossa equipa a qualquer hora</p>
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
-              </button>
-
-              {/* Onboarding */}
-              <button onClick={() => setShowOnboardingDialog(true)}
-                className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-amber-100 p-2"><CalendarCheck className="h-5 w-5 text-amber-700" /></div>
-                  <div className="text-left">
-                    <p className="font-medium text-slate-800">Onboarding Personalizado</p>
-                    <p className="text-xs text-slate-400">Sessão de configuração com um especialista</p>
-                  </div>
-                </div>
-                <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
-              </button>
-
-              </div>
-            </div>
-          </motion.div>
-        )}
-
         {/* Dados — segunda célula da grelha Subscrição+Dados */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <h3 className="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">Dados</h3>
@@ -497,6 +442,61 @@ export default function Settings() {
           </div>
         </motion.div>
         </div>
+
+        {/* Business Resources — full width, 3 cols inside */}
+        {isBusiness && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
+            <h3 className="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">Recursos Business</h3>
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+              <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+
+                {/* API Access */}
+                <div className="p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="rounded-xl bg-amber-100 p-2"><Code2 className="h-5 w-5 text-amber-700" /></div>
+                    <div>
+                      <p className="font-medium text-slate-800">Acesso API</p>
+                      <p className="text-xs text-slate-400">Integra o WiseMoney nos teus sistemas</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5">
+                    <code className="flex-1 text-xs text-slate-600 font-mono truncate">{apiKey}</code>
+                    <button onClick={handleCopyApiKey} className="shrink-0 text-slate-400 hover:text-amber-600 transition-colors">
+                      {apiKeyCopied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Support 24/7 */}
+                <button onClick={() => setShowSupportDialog(true)}
+                  className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-xl bg-amber-100 p-2"><HeadphonesIcon className="h-5 w-5 text-amber-700" /></div>
+                    <div className="text-left">
+                      <p className="font-medium text-slate-800">Suporte Dedicado 24/7</p>
+                      <p className="text-xs text-slate-400">Fala com a nossa equipa a qualquer hora</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
+                </button>
+
+                {/* Onboarding */}
+                <button onClick={() => setShowOnboardingDialog(true)}
+                  className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-xl bg-amber-100 p-2"><CalendarCheck className="h-5 w-5 text-amber-700" /></div>
+                    <div className="text-left">
+                      <p className="font-medium text-slate-800">Onboarding Personalizado</p>
+                      <p className="text-xs text-slate-400">Sessão de configuração com um especialista</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
+                </button>
+
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Logout */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
