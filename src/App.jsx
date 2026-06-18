@@ -21,6 +21,7 @@ import BusinessKPIs from '@/pages/business/BusinessKPIs';
 import BusinessStats from '@/pages/business/BusinessStats';
 import BusinessEmployees from '@/pages/business/BusinessEmployees';
 import BusinessAchievements from '@/pages/business/BusinessAchievements';
+import BusinessGoals from '@/pages/business/BusinessGoals';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -41,6 +42,7 @@ const BusinessRoutes = () => (
     <Route path="/BusinessStats"       element={<BL><BusinessStats /></BL>} />
     <Route path="/BusinessEmployees"   element={<BL><BusinessEmployees /></BL>} />
     <Route path="/BusinessAchievements" element={<BL><BusinessAchievements /></BL>} />
+    <Route path="/BusinessGoals"       element={<BL><BusinessGoals /></BL>} />
     <Route path="/Settings"            element={<BL><Settings /></BL>} />
     <Route path="/PlanSelection"       element={<PlanSelection />} />
     <Route path="*"                    element={<Navigate to="/BusinessDashboard" replace />} />

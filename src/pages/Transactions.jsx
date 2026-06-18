@@ -47,7 +47,7 @@ export default function Transactions() {
 
   const { data: transactions = [], isLoading } = useQuery({
     queryKey: ['transactions', user?.email],
-    queryFn: () => user ? base44.entities.Transaction.filter({ created_by: user.email }, '-date', 500) : [],
+    queryFn: () => user ? base44.entities.Transaction.filter({ created_by: user.email }, '-created_date', 500) : [],
     enabled: !!user
   });
 

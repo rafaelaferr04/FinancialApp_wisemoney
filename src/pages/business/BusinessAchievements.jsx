@@ -194,7 +194,7 @@ const RARITY = {
 const CAT_LABELS = { financeiro: '💰 Financeiro', rh: '👥 Recursos Humanos', estrategia: '🎯 Estratégia', operacional: '⚙️ Operacional' };
 
 export default function BusinessAchievements() {
-  const { data: transactions = [] } = useQuery({ queryKey: ['business_transactions'], queryFn: () => base44.entities.BusinessTransaction.filter({}, '-date', 500) });
+  const { data: transactions = [] } = useQuery({ queryKey: ['business_transactions'], queryFn: () => base44.entities.BusinessTransaction.filter({}, '-created_date', 500) });
   const { data: kpis = [] } = useQuery({ queryKey: ['business_kpis'], queryFn: () => base44.entities.BusinessKPI.filter({ is_active: true }) });
   const { data: employees = [] } = useQuery({ queryKey: ['employees'], queryFn: () => base44.entities.Employee.filter({ status: 'active' }) });
   const { data: departments = [] } = useQuery({ queryKey: ['departments'], queryFn: () => base44.entities.Department.filter() });

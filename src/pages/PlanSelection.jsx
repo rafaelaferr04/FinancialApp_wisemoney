@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+import BusinessSetupModal from '@/components/business/BusinessSetupModal';
 
 const PLANS = [
   {
@@ -253,11 +254,17 @@ function PaymentModal({ plan, onClose, onSuccess }) {
   );
 }
 
+const BUSINESS_PLAN = PLANS.find(p => p.id === 'business');
+
 export default function PlanSelection() {
-  const { activatePlan, plan: currentPlan } = usePlan();
+  const { activatePlan, setupBusiness, plan: currentPlan, showFreeTrial } = usePlan();
   const navigate = useNavigate();
   const [payingPlan, setPayingPlan] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showBusinessSetup, setShowBusinessSetup] = useState(false);
+  const [pendingCreateData, setPendingCreateData] = useState(null);
+
+  const visiblePlans = PLANS.filter(p => p.id !== 'free_trial' || showFreeTrial);
 
   const handleSelect = async (plan) => {
     if (plan.id === 'free_trial') {
@@ -266,16 +273,32 @@ export default function PlanSelection() {
       setLoading(false);
       toast.success('Bem-vindo ao Teste Gratuito!');
       navigate('/Dashboard');
+    } else if (plan.id === 'business') {
+      // Show setup modal first — only creators pay
+      setShowBusinessSetup(true);
     } else {
       setPayingPlan(plan);
     }
   };
 
   const handlePaymentSuccess = async () => {
-    await activatePlan(payingPlan.id);
-    setPayingPlan(null);
-    toast.success(`Plano ${payingPlan.name} activado!`);
-    navigate('/Dashboard');
+    if (pendingCreateData) {
+      // Business create flow: complete setup after payment
+      try {
+        await setupBusiness(pendingCreateData);
+        setPendingCreateData(null);
+        setPayingPlan(null);
+        toast.success('Empresa criada! Bem-vindo ao WiseMoney Business.');
+        navigate('/BusinessDashboard');
+      } catch (e) {
+        toast.error(e.message || 'Erro ao criar empresa');
+      }
+    } else {
+      await activatePlan(payingPlan.id);
+      setPayingPlan(null);
+      toast.success(`Plano ${payingPlan.name} activado!`);
+      navigate('/Dashboard');
+    }
   };
 
   return (
@@ -311,8 +334,8 @@ export default function PlanSelection() {
             2-col (640-1023): clamp(..., 2-3vw, ...) — encolhe com o ecrã
             4-col  (1024px+): clamp(..., 1-2vw, ...) — encolhe com o ecrã
       */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-3 lg:gap-[clamp(0.5rem,1vw,1rem)] w-full max-w-sm sm:max-w-3xl lg:max-w-6xl">
-        {PLANS.map((plan, i) => {
+      <div className={`grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-3 lg:gap-[clamp(0.5rem,1vw,1rem)] w-full max-w-sm sm:max-w-3xl lg:max-w-6xl ${visiblePlans.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+        {visiblePlans.map((plan, i) => {
           const Icon = plan.icon;
           const isCurrent = currentPlan === plan.id;
           return (
@@ -403,6 +426,23 @@ export default function PlanSelection() {
           />
         )}
       </AnimatePresence>
+
+      {/* Business setup / join modal */}
+      <BusinessSetupModal
+        isOpen={showBusinessSetup}
+        onClose={() => setShowBusinessSetup(false)}
+        onNeedPayment={(createData) => {
+          setPendingCreateData(createData);
+          setShowBusinessSetup(false);
+          setPayingPlan(BUSINESS_PLAN);
+        }}
+        onComplete={() => {
+          // Called after successful join (no payment)
+          setShowBusinessSetup(false);
+          toast.success('Bem-vindo ao WiseMoney Business!');
+          navigate('/BusinessDashboard');
+        }}
+      />
     </div>
   );
 }

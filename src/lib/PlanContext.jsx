@@ -20,9 +20,16 @@ function todayStr() {
   return new Date().toISOString().split('T')[0];
 }
 
+export async function hashPassword(password) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(password));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export function PlanProvider({ children }) {
   const [profile, setProfile] = useState(null);
   const [planLoading, setPlanLoading] = useState(true);
+  const [businessAccount, setBusinessAccount] = useState(null);
+  const [businessMember, setBusinessMember] = useState(null);
 
   useEffect(() => { loadProfile(); }, []);
 
@@ -31,11 +38,11 @@ export function PlanProvider({ children }) {
     try {
       const me = await base44.auth.me();
       if (!me) return;
+
       const profiles = await base44.entities.UserProfile.filter({ created_by: me.email });
       let p = profiles[0];
 
       if (p && !p.plan && localStorage.getItem('wisemoney_show_plans') !== 'true') {
-        // Conta existente sem plano → auto-set free_trial com data de renovação
         const today = todayStr();
         const renewal = addMonths(today, 2);
         await base44.entities.UserProfile.update(p.id, {
@@ -47,6 +54,22 @@ export function PlanProvider({ children }) {
       }
 
       setProfile(p || null);
+
+      // Load business membership if business plan
+      if (p?.plan === 'business') {
+        try {
+          const members = await base44.entities.BusinessMember.filter({ member_email: me.email, is_active: true });
+          const member = members[0] || null;
+          setBusinessMember(member);
+          if (member?.business_id) {
+            localStorage.setItem('wm_business_id', member.business_id);
+            const accounts = await base44.entities.BusinessAccount.filter({ id: member.business_id });
+            setBusinessAccount(accounts[0] || null);
+          }
+        } catch (e) {
+          // business tables may not exist yet
+        }
+      }
     } catch (e) {
       console.error('PlanContext error:', e);
     } finally {
@@ -56,7 +79,6 @@ export function PlanProvider({ children }) {
 
   const activatePlan = async (planId) => {
     const today = todayStr();
-    // free_trial = 2 meses; planos pagos = 1 mês
     const renewalMonths = planId === 'free_trial' ? 2 : 1;
     const renewal = addMonths(today, renewalMonths);
     const me = await base44.auth.me();
@@ -84,6 +106,79 @@ export function PlanProvider({ children }) {
     localStorage.removeItem('wisemoney_show_plans');
   };
 
+  // Create a new business workspace (admin flow)
+  const setupBusiness = async ({ companyName, companyUsername, myUsername, myPassword }) => {
+    const me = await base44.auth.me();
+    if (!me) throw new Error('Não autenticado');
+
+    const pwdHash = await hashPassword(myPassword);
+
+    // Create business account
+    const account = await base44.entities.BusinessAccount.create({
+      company_name: companyName,
+      company_username: companyUsername.toLowerCase().replace(/\s/g, '_'),
+      owner_email: me.email,
+    });
+
+    // Create admin member record
+    const member = await base44.entities.BusinessMember.create({
+      business_id: account.id,
+      member_username: myUsername,
+      member_password: pwdHash,
+      member_email: me.email,
+      role: 'admin',
+      display_name: me.full_name || myUsername,
+      is_active: true,
+    });
+
+    localStorage.setItem('wm_business_id', account.id);
+    setBusinessAccount(account);
+    setBusinessMember(member);
+
+    await activatePlan('business');
+    return account;
+  };
+
+  // Join an existing business workspace (employee flow)
+  const joinBusiness = async ({ companyUsername, myUsername, myPassword }) => {
+    const me = await base44.auth.me();
+    if (!me) throw new Error('Não autenticado');
+
+    const pwdHash = await hashPassword(myPassword);
+
+    // Find business account
+    const accounts = await base44.entities.BusinessAccount.filter({ company_username: companyUsername.toLowerCase() });
+    if (!accounts.length) throw new Error('Empresa não encontrada. Verifica o username.');
+
+    const account = accounts[0];
+
+    // Find matching member record
+    const members = await base44.entities.BusinessMember.filter({
+      business_id: account.id,
+      member_username: myUsername,
+      member_password: pwdHash,
+      is_active: true,
+    });
+
+    if (!members.length) throw new Error('Credenciais inválidas. Pede ao administrador para verificar.');
+
+    const member = members[0];
+
+    // Link this WiseMoney account to the member record
+    if (member.member_email && member.member_email !== me.email) {
+      throw new Error('Este utilizador já está associado a outra conta WiseMoney.');
+    }
+
+    await base44.entities.BusinessMember.update(member.id, { member_email: me.email });
+
+    localStorage.setItem('wm_business_id', account.id);
+    setBusinessAccount(account);
+    setBusinessMember({ ...member, member_email: me.email });
+
+    await activatePlan('business');
+    return account;
+  };
+
   const cancelSubscription = async () => {
     const today = todayStr();
     if (!profile) return;
@@ -91,7 +186,12 @@ export function PlanProvider({ children }) {
     setProfile(p => ({ ...p, plan_cancelled_at: today }));
   };
 
-  // Contador diário em localStorage (não precisa de campo extra na BD)
+  const reactivateSubscription = async () => {
+    if (!profile) return;
+    await base44.entities.UserProfile.update(profile.id, { plan_cancelled_at: null });
+    setProfile(p => ({ ...p, plan_cancelled_at: null }));
+  };
+
   const getChatQuestionsLeft = () => {
     if (profile?.plan !== 'free_trial') return Infinity;
     const today = todayStr();
@@ -110,17 +210,14 @@ export function PlanProvider({ children }) {
     localStorage.setItem('wm_chat_count', String(count + 1));
   };
 
-  // ── Computadas ────────────────────────────────────────────────────
   const today = todayStr();
 
-  // Período gratuito expirado
   const trialExpired = !!(
     profile?.plan === 'free_trial' &&
     profile?.plan_renewal_at &&
     today > profile.plan_renewal_at
   );
 
-  // Subscrição cancelada E data de renovação já passou
   const subExpired = !!(
     profile?.plan_cancelled_at &&
     profile?.plan_renewal_at &&
@@ -128,23 +225,23 @@ export function PlanProvider({ children }) {
   );
 
   const planExpired = trialExpired || subExpired;
-
-  // Se expirou, o plano efectivo é null
   const plan = planExpired ? null : (profile?.plan || null);
-
-  // Subscrição está cancelada mas ainda dentro do período pago
   const isCancelled = !!(profile?.plan_cancelled_at && !planExpired);
 
-  // Data de renovação formatada
-  const renewalDate = profile?.plan_renewal_at || null;
+  const renewalDate = profile?.plan_renewal_at ||
+    (profile?.plan_started_at
+      ? addMonths(profile.plan_started_at, profile.plan === 'free_trial' ? 2 : 1)
+      : null);
 
-  // Só mostra o plano grátis no primeiro registo (flag definida no Login)
   const showFreeTrial = !planLoading && localStorage.getItem('wisemoney_show_plans') === 'true';
 
   const needsPlanSelection = !planLoading && (
     (!profile?.plan && localStorage.getItem('wisemoney_show_plans') === 'true') ||
     planExpired
   );
+
+  const businessId = businessMember?.business_id || localStorage.getItem('wm_business_id') || null;
+  const isBusinessAdmin = businessMember?.role === 'admin';
 
   return (
     <PlanContext.Provider value={{
@@ -160,8 +257,18 @@ export function PlanProvider({ children }) {
       renewalDate,
       showFreeTrial,
       needsPlanSelection,
+      // Business workspace
+      businessId,
+      businessAccount,
+      businessMember,
+      isBusinessAdmin,
+      needsBusinessSetup: plan === 'business' && !businessId,
+      // Actions
       activatePlan,
+      setupBusiness,
+      joinBusiness,
       cancelSubscription,
+      reactivateSubscription,
       getChatQuestionsLeft,
       useChatQuestion,
       reloadProfile: loadProfile,

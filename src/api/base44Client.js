@@ -33,8 +33,11 @@ export const base44 = {
     Achievement:         createEntityManager('Achievement'),
     BusinessTransaction: createEntityManager('BusinessTransaction'),
     BusinessKPI:         createEntityManager('BusinessKPI'),
+    BusinessGoal:        createEntityManager('BusinessGoal'),
     Department:          createEntityManager('Department'),
     Employee:            createEntityManager('Employee'),
+    BusinessAccount:     createEntityManager('BusinessAccount'),
+    BusinessMember:      createEntityManager('BusinessMember'),
   },
 
   appLogs: {

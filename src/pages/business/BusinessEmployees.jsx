@@ -2,30 +2,45 @@ import React, { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Pencil, Trash2, Users, Building2, Star, X, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users, Building2, Star, X, Loader2, Upload, ArrowUpDown, ChevronUp, ChevronDown, SlidersHorizontal, KeyRound, Eye, EyeOff } from 'lucide-react';
+import ImportEmployeesModal from '@/components/business/ImportEmployeesModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { usePlan, hashPassword } from '@/lib/PlanContext';
 
 // ─── Employee Modal ───────────────────────────────────────────────
 function EmployeeModal({ isOpen, onClose, onSave, editEmp, departments }) {
+  const { businessId, isBusinessAdmin } = usePlan();
   const empty = () => ({ name: '', role: '', department: '', hire_date: '', salary: '', status: 'active', satisfaction_score: '', courses_completed: 0 });
   const [form, setForm] = useState(empty());
+  const [bizUsername, setBizUsername] = useState('');
+  const [bizPassword, setBizPassword] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
   const [saving, setSaving] = useState(false);
 
   React.useEffect(() => {
     if (editEmp) {
       setForm({ name: editEmp.name || '', role: editEmp.role || '', department: editEmp.department || '', hire_date: editEmp.hire_date || '', salary: editEmp.salary ?? '', status: editEmp.status || 'active', satisfaction_score: editEmp.satisfaction_score ?? '', courses_completed: editEmp.courses_completed || 0 });
-    } else setForm(empty());
+    } else {
+      setForm(empty());
+      setBizUsername('');
+      setBizPassword('');
+    }
   }, [editEmp, isOpen]);
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
   const handleSave = async () => {
     if (!form.name.trim()) return toast.error('Nome obrigatório');
     setSaving(true);
-    await onSave({ ...form, salary: form.salary !== '' ? parseFloat(form.salary) : null, satisfaction_score: form.satisfaction_score !== '' ? parseFloat(form.satisfaction_score) : null }, editEmp?.id);
-    setSaving(false); onClose();
+    try {
+      await onSave({ ...form, salary: form.salary !== '' ? parseFloat(form.salary) : null, satisfaction_score: form.satisfaction_score !== '' ? parseFloat(form.satisfaction_score) : null }, editEmp?.id, { bizUsername: bizUsername.trim(), bizPassword });
+    } finally {
+      setSaving(false);
+      onClose();
+    }
   };
 
   return (
@@ -77,6 +92,37 @@ function EmployeeModal({ isOpen, onClose, onSave, editEmp, departments }) {
                   </select>
                 </div>
               </div>
+
+              {/* Business access credentials — admin only */}
+              {isBusinessAdmin && (
+                <div className="border-t border-slate-100 pt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <KeyRound className="w-4 h-4 text-amber-600" />
+                    <p className="text-sm font-semibold text-slate-700">Acesso ao WiseMoney Business</p>
+                    <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-medium">opcional</span>
+                  </div>
+                  <p className="text-xs text-slate-400 mb-3">Cria credenciais para que o colaborador possa aceder à conta empresarial.</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs">Username</Label>
+                      <Input value={bizUsername} onChange={e => setBizUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                        placeholder="joao.silva" className="mt-1.5 h-11 rounded-xl" />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Password</Label>
+                      <div className="relative mt-1.5">
+                        <Input type={showPwd ? 'text' : 'password'} value={bizPassword} onChange={e => setBizPassword(e.target.value)}
+                          placeholder="Min. 6 chars" className="h-11 rounded-xl pr-9" />
+                        <button type="button" onClick={() => setShowPwd(v => !v)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                          {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-3 pt-2">
                 <button onClick={onClose} className="flex-1 h-11 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">Cancelar</button>
                 <Button onClick={handleSave} disabled={saving} className="flex-1 h-11 rounded-xl bg-amber-600 hover:bg-amber-700 font-semibold">
@@ -138,22 +184,93 @@ function DeptModal({ isOpen, onClose, onSave, editDept }) {
   );
 }
 
+// ─── Team Picker ──────────────────────────────────────────────────────────────
+function TeamPicker({ isOpen, onClose, onEmployee, onDept, onImport }) {
+  if (!isOpen) return null;
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          onClick={onClose} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+        <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 24 }}
+          className="relative bg-white rounded-2xl p-5 w-full max-w-sm z-10 space-y-3">
+          <div className="flex items-center justify-between mb-1">
+            <p className="font-semibold text-slate-800">Adicionar à Equipa</p>
+            <button onClick={onClose} className="p-1 rounded-lg hover:bg-slate-100"><X className="w-4 h-4 text-slate-400" /></button>
+          </div>
+          <button onClick={() => { onClose(); onEmployee(); }}
+            className="w-full flex items-center gap-4 p-4 rounded-xl border border-slate-100 hover:border-amber-200 hover:bg-amber-50 transition-colors text-left">
+            <div className="w-11 h-11 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+              <Users className="w-5 h-5 text-amber-700" />
+            </div>
+            <div>
+              <p className="font-semibold text-slate-800 text-sm">Novo Colaborador</p>
+              <p className="text-xs text-slate-400">Adicionar membro à equipa</p>
+            </div>
+          </button>
+          <button onClick={() => { onClose(); onDept(); }}
+            className="w-full flex items-center gap-4 p-4 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50 transition-colors text-left">
+            <div className="w-11 h-11 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+              <Building2 className="w-5 h-5 text-blue-700" />
+            </div>
+            <div>
+              <p className="font-semibold text-slate-800 text-sm">Novo Departamento</p>
+              <p className="text-xs text-slate-400">Criar e organizar por área</p>
+            </div>
+          </button>
+          <button onClick={() => { onClose(); onImport(); }}
+            className="w-full flex items-center gap-4 p-4 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50 transition-colors text-left">
+            <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
+              <Upload className="w-5 h-5 text-slate-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-slate-800 text-sm">Importar Ficheiro</p>
+              <p className="text-xs text-slate-400">CSV com colaboradores ou departamentos</p>
+            </div>
+          </button>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+}
+
 // ─── Main Page ───────────────────────────────────────────────────
 export default function BusinessEmployees() {
   const qc = useQueryClient();
+  const [teamPicker, setTeamPicker] = useState(false);
   const [empModal, setEmpModal] = useState(false);
   const [deptModal, setDeptModal] = useState(false);
+  const [importModal, setImportModal] = useState(false);
+  const [importTab, setImportTab] = useState('employees');
   const [editEmp, setEditEmp] = useState(null);
   const [editDept, setEditDept] = useState(null);
   const [activeTab, setActiveTab] = useState('employees');
   const [deptFilter, setDeptFilter] = useState('all');
+  const [empSort, setEmpSort] = useState({ field: null, dir: 'asc' });
+  const [deptSort, setDeptSort] = useState({ field: null, dir: 'asc' });
 
   const { data: employees = [] } = useQuery({ queryKey: ['employees_all'], queryFn: () => base44.entities.Employee.filter() });
   const { data: departments = [] } = useQuery({ queryKey: ['departments'], queryFn: () => base44.entities.Department.filter() });
 
-  const filtered = useMemo(() =>
-    employees.filter(e => deptFilter === 'all' || e.department === deptFilter),
-    [employees, deptFilter]);
+  const toggleEmpSort = (field) => setEmpSort(prev =>
+    prev.field === field ? { field, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { field, dir: 'asc' }
+  );
+  const toggleDeptSort = (field) => setDeptSort(prev =>
+    prev.field === field ? { field, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { field, dir: 'asc' }
+  );
+
+  const filtered = useMemo(() => {
+    let list = employees.filter(e => deptFilter === 'all' || e.department === deptFilter);
+    if (empSort.field) {
+      list = [...list].sort((a, b) => {
+        const aVal = a[empSort.field] ?? (empSort.field === 'hire_date' ? '' : -Infinity);
+        const bVal = b[empSort.field] ?? (empSort.field === 'hire_date' ? '' : -Infinity);
+        if (empSort.field === 'hire_date') return empSort.dir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        return empSort.dir === 'asc' ? aVal - bVal : bVal - aVal;
+      });
+    }
+    return list;
+  }, [employees, deptFilter, empSort]);
 
   const avgSatisfaction = useMemo(() => {
     const active = employees.filter(e => e.status === 'active' && e.satisfaction_score != null);
@@ -164,10 +281,38 @@ export default function BusinessEmployees() {
     employees.filter(e => e.status === 'active').reduce((s, e) => s + (e.salary || 0), 0),
     [employees]);
 
-  const handleSaveEmp = async (data, id) => {
+  const handleSaveEmp = async (data, id, { bizUsername, bizPassword } = {}) => {
     const me = await base44.auth.me();
-    if (id) { await base44.entities.Employee.update(id, data); toast.success('Colaborador atualizado'); }
-    else { await base44.entities.Employee.create({ ...data, created_by: me.email }); toast.success('Colaborador adicionado'); }
+    let emp;
+    if (id) {
+      await base44.entities.Employee.update(id, data);
+      emp = { id, ...data };
+      toast.success('Colaborador atualizado');
+    } else {
+      emp = await base44.entities.Employee.create({ ...data, created_by: me.email });
+      toast.success('Colaborador adicionado');
+    }
+
+    // Create/update business member credentials if provided
+    if (bizUsername && bizPassword && bizPassword.length >= 6) {
+      try {
+        const pwdHash = await hashPassword(bizPassword);
+        const businessId = localStorage.getItem('wm_business_id');
+        if (businessId) {
+          // Check if a member record already exists for this username
+          const existing = await base44.entities.BusinessMember.filter({ business_id: businessId, member_username: bizUsername });
+          if (existing.length > 0) {
+            await base44.entities.BusinessMember.update(existing[0].id, { member_password: pwdHash, display_name: data.name, is_active: true });
+          } else {
+            await base44.entities.BusinessMember.create({ business_id: businessId, member_username: bizUsername, member_password: pwdHash, display_name: data.name, role: 'member', is_active: true });
+          }
+          toast.success(`Acesso criado para @${bizUsername}`);
+        }
+      } catch (e) {
+        toast.error('Erro ao criar credenciais: ' + (e.message || ''));
+      }
+    }
+
     qc.invalidateQueries({ queryKey: ['employees_all'] });
     qc.invalidateQueries({ queryKey: ['employees'] });
     setEditEmp(null);
@@ -191,14 +336,10 @@ export default function BusinessEmployees() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-800">Equipa</h1>
-        <div className="flex gap-2">
-          <button onClick={() => { setEditDept(null); setDeptModal(true); }} className="flex items-center gap-1.5 px-3 py-2 border border-amber-200 text-amber-700 rounded-xl text-sm font-medium hover:bg-amber-50 transition-colors">
-            <Building2 className="w-4 h-4" /> Depto
-          </button>
-          <button onClick={() => { setEditEmp(null); setEmpModal(true); }} className="flex items-center gap-1.5 px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-semibold transition-colors">
-            <Plus className="w-4 h-4" /> Colaborador
-          </button>
-        </div>
+        <button onClick={() => setTeamPicker(true)}
+          className="flex items-center gap-1.5 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-semibold transition-colors">
+          <Plus className="w-4 h-4" /> Adicionar
+        </button>
       </div>
 
       {/* Stats */}
@@ -239,6 +380,27 @@ export default function BusinessEmployees() {
               </button>
             ))}
           </div>
+          {/* Sort buttons */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs text-slate-400 flex items-center gap-1"><SlidersHorizontal className="w-3 h-3" /> Ordenar:</span>
+            {[
+              { field: 'salary', label: 'Salário' },
+              { field: 'hire_date', label: 'Data Entrada' },
+              { field: 'satisfaction_score', label: 'Score' },
+            ].map(({ field, label }) => {
+              const active = empSort.field === field;
+              const SortIcon = active ? (empSort.dir === 'asc' ? ChevronUp : ChevronDown) : ArrowUpDown;
+              return (
+                <button key={field} onClick={() => toggleEmpSort(field)}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${active ? 'bg-amber-600 text-white border-amber-600' : 'bg-white border-slate-200 text-slate-600 hover:border-amber-200'}`}>
+                  <SortIcon className="w-3 h-3" />{label}
+                </button>
+              );
+            })}
+            {empSort.field && (
+              <button onClick={() => setEmpSort({ field: null, dir: 'asc' })} className="text-xs text-slate-400 hover:text-slate-600 underline">limpar</button>
+            )}
+          </div>
 
           {filtered.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center py-14 text-slate-400">
@@ -249,36 +411,35 @@ export default function BusinessEmployees() {
               </button>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="grid grid-cols-3 gap-2">
               <AnimatePresence>
-                {filtered.map(emp => (
-                  <motion.div key={emp.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    className="flex items-center gap-3 p-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors group">
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-base font-bold text-amber-700 shrink-0">
-                      {(emp.name || '?').charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-semibold text-slate-800">{emp.name}</p>
-                        <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${STATUS_COLOR[emp.status]}`}>{STATUS_LABEL[emp.status]}</span>
+                {filtered.map((emp, i) => (
+                  <motion.div key={emp.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ delay: i * 0.04 }}
+                    className="bg-white rounded-xl border border-slate-100 shadow-sm p-2.5 hover:border-amber-200 transition-all group">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-sm font-bold text-amber-700 shrink-0">
+                        {(emp.name || '?').charAt(0).toUpperCase()}
                       </div>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        {[emp.role, emp.department].filter(Boolean).join(' · ')}
-                        {emp.hire_date && ` · Desde ${emp.hire_date}`}
-                      </p>
+                      <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => { setEditEmp(emp); setEmpModal(true); }} className="p-1 rounded-md hover:bg-slate-100 text-slate-400"><Pencil className="w-3 h-3" /></button>
+                        <button onClick={() => handleDeleteEmp(emp.id)} className="p-1 rounded-md hover:bg-red-50 text-red-400"><Trash2 className="w-3 h-3" /></button>
+                      </div>
                     </div>
-                    <div className="text-right shrink-0">
+                    <p className="text-xs font-bold text-slate-800 leading-tight truncate">{emp.name}</p>
+                    <span className={`text-[9px] font-semibold px-1 py-0.5 rounded-full ${STATUS_COLOR[emp.status]}`}>{STATUS_LABEL[emp.status]}</span>
+                    {emp.role && <p className="text-[10px] text-slate-500 mt-1 truncate">{emp.role}</p>}
+                    {emp.department && <p className="text-[10px] text-slate-400 truncate">{emp.department}</p>}
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-50">
+                      <div className="min-w-0">
+                        {emp.salary && <p className="text-[10px] font-semibold text-slate-600 truncate">€{Number(emp.salary).toLocaleString('pt-PT')}</p>}
+                        {emp.hire_date && <p className="text-[9px] text-slate-400 truncate">{emp.hire_date.slice(0, 7)}</p>}
+                      </div>
                       {emp.satisfaction_score != null && (
-                        <div className="flex items-center gap-0.5 justify-end mb-0.5">
-                          <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-                          <span className="text-xs font-bold text-amber-700">{emp.satisfaction_score}</span>
+                        <div className="flex items-center gap-0.5 bg-amber-50 px-1.5 py-0.5 rounded-full shrink-0">
+                          <Star className="w-2.5 h-2.5 text-amber-500 fill-amber-500" />
+                          <span className="text-[10px] font-bold text-amber-700">{emp.satisfaction_score}</span>
                         </div>
                       )}
-                      {emp.salary && <p className="text-xs text-slate-500">€{Number(emp.salary).toLocaleString('pt-PT')}/mês</p>}
-                    </div>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => { setEditEmp(emp); setEmpModal(true); }} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"><Pencil className="w-3.5 h-3.5" /></button>
-                      <button onClick={() => handleDeleteEmp(emp.id)} className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
                     </div>
                   </motion.div>
                 ))}
@@ -291,6 +452,26 @@ export default function BusinessEmployees() {
       {/* Departments tab */}
       {activeTab === 'departments' && (
         <div className="space-y-3">
+          {/* Sort buttons */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs text-slate-400 flex items-center gap-1"><SlidersHorizontal className="w-3 h-3" /> Ordenar:</span>
+            {[
+              { field: 'budget_monthly', label: 'Orçamento' },
+              { field: 'headcount', label: 'Nº Colaboradores' },
+            ].map(({ field, label }) => {
+              const active = deptSort.field === field;
+              const SortIcon = active ? (deptSort.dir === 'asc' ? ChevronUp : ChevronDown) : ArrowUpDown;
+              return (
+                <button key={field} onClick={() => toggleDeptSort(field)}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${active ? 'bg-amber-600 text-white border-amber-600' : 'bg-white border-slate-200 text-slate-600 hover:border-amber-200'}`}>
+                  <SortIcon className="w-3 h-3" />{label}
+                </button>
+              );
+            })}
+            {deptSort.field && (
+              <button onClick={() => setDeptSort({ field: null, dir: 'asc' })} className="text-xs text-slate-400 hover:text-slate-600 underline">limpar</button>
+            )}
+          </div>
           {departments.length === 0 ? (
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center py-14 text-slate-400">
               <Building2 className="w-10 h-10 mb-3 opacity-30" />
@@ -300,25 +481,48 @@ export default function BusinessEmployees() {
               </button>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-              {departments.map(dept => {
+            <div className="grid grid-cols-3 gap-2">
+              {(deptSort.field ? [...departments].sort((a, b) => {
+                const hcA = employees.filter(e => e.department === a.name && e.status === 'active').length;
+                const hcB = employees.filter(e => e.department === b.name && e.status === 'active').length;
+                const aVal = deptSort.field === 'headcount' ? hcA : (a.budget_monthly || 0);
+                const bVal = deptSort.field === 'headcount' ? hcB : (b.budget_monthly || 0);
+                return deptSort.dir === 'asc' ? aVal - bVal : bVal - aVal;
+              }) : departments).map((dept, i) => {
                 const headcount = employees.filter(e => e.department === dept.name && e.status === 'active').length;
+                const totalSalary = employees.filter(e => e.department === dept.name && e.status === 'active').reduce((s, e) => s + (e.salary || 0), 0);
+                const budgetUsedPct = dept.budget_monthly > 0 ? Math.min(Math.round((totalSalary / dept.budget_monthly) * 100), 100) : 0;
                 return (
-                  <div key={dept.id} className="flex items-center gap-3 p-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors group">
-                    <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
-                      <Building2 className="w-5 h-5 text-amber-600" />
+                  <motion.div key={dept.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
+                    className="bg-white rounded-xl border border-slate-100 shadow-sm p-2.5 hover:border-amber-200 transition-all group">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+                        <Building2 className="w-4 h-4 text-amber-600" />
+                      </div>
+                      <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => { setEditDept(dept); setDeptModal(true); }} className="p-1 rounded-md hover:bg-slate-100 text-slate-400"><Pencil className="w-3 h-3" /></button>
+                        <button onClick={() => handleDeleteDept(dept.id)} className="p-1 rounded-md hover:bg-red-50 text-red-400"><Trash2 className="w-3 h-3" /></button>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-800">{dept.name}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        {dept.manager && `👤 ${dept.manager} · `}{headcount} colaboradores{dept.budget_monthly > 0 && ` · €${Number(dept.budget_monthly).toLocaleString('pt-PT')}/mês`}
-                      </p>
+                    <p className="text-xs font-bold text-slate-800 truncate">{dept.name}</p>
+                    {dept.manager && <p className="text-[10px] text-slate-500 truncate">👤 {dept.manager}</p>}
+                    <div className="flex items-center gap-1 text-[10px] text-slate-500 mt-1">
+                      <Users className="w-2.5 h-2.5" /><span>{headcount}</span>
+                      {dept.budget_monthly > 0 && <span className="ml-auto font-medium text-slate-700">€{Number(dept.budget_monthly / 1000).toFixed(0)}k</span>}
                     </div>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => { setEditDept(dept); setDeptModal(true); }} className="p-2 rounded-lg hover:bg-slate-100 text-slate-500"><Pencil className="w-3.5 h-3.5" /></button>
-                      <button onClick={() => handleDeleteDept(dept.id)} className="p-2 rounded-lg hover:bg-red-50 text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
-                    </div>
-                  </div>
+                    {dept.budget_monthly > 0 && (
+                      <div className="mt-2">
+                        <div className="flex justify-between text-[9px] text-slate-400 mb-0.5">
+                          <span>Salários</span>
+                          <span className={budgetUsedPct >= 100 ? 'text-red-500 font-semibold' : ''}>{budgetUsedPct}%</span>
+                        </div>
+                        <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full transition-all ${budgetUsedPct >= 100 ? 'bg-red-500' : budgetUsedPct >= 80 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                            style={{ width: `${budgetUsedPct}%` }} />
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
                 );
               })}
             </div>
@@ -326,8 +530,16 @@ export default function BusinessEmployees() {
         </div>
       )}
 
+      <TeamPicker
+        isOpen={teamPicker}
+        onClose={() => setTeamPicker(false)}
+        onEmployee={() => { setEditEmp(null); setEmpModal(true); }}
+        onDept={() => { setEditDept(null); setDeptModal(true); }}
+        onImport={() => { setImportTab('employees'); setImportModal(true); }}
+      />
       <EmployeeModal isOpen={empModal} onClose={() => { setEmpModal(false); setEditEmp(null); }} onSave={handleSaveEmp} editEmp={editEmp} departments={departments} />
       <DeptModal isOpen={deptModal} onClose={() => { setDeptModal(false); setEditDept(null); }} onSave={handleSaveDept} editDept={editDept} />
+      <ImportEmployeesModal isOpen={importModal} onClose={() => setImportModal(false)} defaultTab={importTab} />
     </div>
   );
 }

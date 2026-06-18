@@ -88,7 +88,7 @@ export default function BusinessKPIs() {
   });
   const { data: transactions = [] } = useQuery({
     queryKey: ['business_transactions'],
-    queryFn: () => base44.entities.BusinessTransaction.filter({}, '-date', 500),
+    queryFn: () => base44.entities.BusinessTransaction.filter({}, '-created_date', 500),
   });
   const { data: employees = [] } = useQuery({
     queryKey: ['employees'],
@@ -166,7 +166,7 @@ export default function BusinessKPIs() {
       </div>
 
       {/* Status summary */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
           const Icon = cfg.icon;
           return (
@@ -180,15 +180,15 @@ export default function BusinessKPIs() {
         })}
       </div>
 
-      {/* Category filters */}
-      <div className="flex gap-1.5 flex-wrap">
+      {/* Category filters — scrollable row */}
+      <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
         <button onClick={() => setFilterCat('all')}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${filterCat === 'all' ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap shrink-0 ${filterCat === 'all' ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
           Todos
         </button>
         {Object.entries(CAT_LABELS).map(([v, l]) => (
           <button key={v} onClick={() => setFilterCat(filterCat === v ? 'all' : v)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${filterCat === v ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap shrink-0 ${filterCat === v ? 'bg-amber-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
             {l}
           </button>
         ))}
@@ -207,7 +207,7 @@ export default function BusinessKPIs() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <AnimatePresence>
             {filtered.map((kpi, i) => {
               const cfg = STATUS_CONFIG[kpi._status];

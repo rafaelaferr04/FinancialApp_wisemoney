@@ -33,7 +33,7 @@ export default function BusinessStats() {
 
   const { data: transactions = [] } = useQuery({
     queryKey: ['business_transactions'],
-    queryFn: () => base44.entities.BusinessTransaction.filter({}, '-date', 500),
+    queryFn: () => base44.entities.BusinessTransaction.filter({}, '-created_date', 500),
   });
   const { data: departments = [] } = useQuery({
     queryKey: ['departments'],

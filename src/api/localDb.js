@@ -14,9 +14,17 @@ const TABLE_MAP = {
   Achievement:         'achievements',
   BusinessTransaction: 'business_transactions',
   BusinessKPI:         'business_kpis',
+  BusinessGoal:        'business_goals',
   Department:          'departments',
   Employee:            'employees',
+  BusinessAccount:     'business_accounts',
+  BusinessMember:      'business_members',
 };
+
+// These tables are shared across all members of the same business
+const BUSINESS_SHARED_TABLES = new Set([
+  'business_transactions', 'business_kpis', 'employees', 'departments',
+]);
 
 async function getCurrentEmail() {
   const { data: { session } } = await supabase.auth.getSession();
@@ -34,6 +42,11 @@ export function createEntityManager(entityName) {
         created_date: new Date().toISOString(),
         created_by: data.created_by ?? email,
       };
+      // Auto-inject business_id for shared business tables
+      if (BUSINESS_SHARED_TABLES.has(table) && !row.business_id) {
+        const bid = localStorage.getItem('wm_business_id');
+        if (bid) row.business_id = bid;
+      }
       const { data: result, error } = await supabase
         .from(table)
         .insert(row)

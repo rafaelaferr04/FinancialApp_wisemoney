@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { User, Bell, Target, Wallet, LogOut, ChevronRight, Save, Loader2, Building2, XCircle, Download, FileSpreadsheet, Crown } from 'lucide-react';
+import { User, Bell, Target, Wallet, LogOut, ChevronRight, Save, Loader2, Building2, XCircle, Download, FileSpreadsheet, Crown, Code2, HeadphonesIcon, CalendarCheck, Copy, Check, Lock } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -19,8 +19,25 @@ import autoTable from 'jspdf-autotable';
 export default function Settings() {
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
-  const { plan, profile: planProfile } = usePlan();
+  const { plan, profile: planProfile, cancelSubscription, reactivateSubscription, isCancelled, renewalDate, isBusiness } = usePlan();
+  const [apiKeyCopied, setApiKeyCopied] = useState(false);
+  const [showOnboardingDialog, setShowOnboardingDialog] = useState(false);
+  const [showSupportDialog, setShowSupportDialog] = useState(false);
+
+  // Deterministic fake API key based on user email
+  const apiKey = planProfile?.id
+    ? `wm_live_${planProfile.id.replace(/-/g, '').slice(0, 24)}`
+    : 'wm_live_••••••••••••••••••••••••';
+
+  const handleCopyApiKey = () => {
+    navigator.clipboard.writeText(apiKey);
+    setApiKeyCopied(true);
+    setTimeout(() => setApiKeyCopied(false), 2000);
+  };
+  const [isReactivating, setIsReactivating] = useState(false);
   const planInfo = PLAN_INFO[plan] || null;
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [showBudgetDialog, setShowBudgetDialog] = useState(false);
   const [showBankModal, setShowBankModal] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -191,17 +208,19 @@ export default function Settings() {
       title: 'Conta',
       items: [{ icon: User, label: 'Perfil', value: user?.full_name || user?.email || 'A carregar...', disabled: true }]
     },
-    {
-      title: 'Configurações Financeiras',
-      items: [
-        { icon: Wallet, label: 'Orçamento Mensal', value: userProfile?.monthly_budget ? `€${userProfile.monthly_budget.toLocaleString('pt-PT')}` : 'Não definido', onClick: () => { setBudgetInput(userProfile?.monthly_budget?.toString() || ''); setShowBudgetDialog(true); } },
-        { icon: Target, label: 'Objetivo Financeiro', value: userProfile?.financial_goal?.replace('_', ' ') || 'Não definido', isSelect: true, options: [{ value: 'save_more', label: 'Poupar Mais' }, { value: 'reduce_debt', label: 'Reduzir Dívidas' }, { value: 'invest', label: 'Começar a Investir' }, { value: 'emergency_fund', label: 'Criar Fundo de Emergência' }, { value: 'retirement', label: 'Planear Reforma' }], onSelect: handleUpdateGoal }
-      ]
-    },
-    {
-      title: 'Integração Bancária',
-      items: [{ icon: Building2, label: 'Conexão com Banco', value: userProfile?.bank_connected ? `Conectado (${userProfile.bank_provider})` : 'Não conectado', onClick: () => !userProfile?.bank_connected && setShowBankModal(true), showDisconnect: userProfile?.bank_connected, onDisconnect: handleDisconnectBank }]
-    },
+    ...(!isBusiness ? [
+      {
+        title: 'Configurações Financeiras',
+        items: [
+          { icon: Wallet, label: 'Orçamento Mensal', value: userProfile?.monthly_budget ? `€${userProfile.monthly_budget.toLocaleString('pt-PT')}` : 'Não definido', onClick: () => { setBudgetInput(userProfile?.monthly_budget?.toString() || ''); setShowBudgetDialog(true); } },
+          { icon: Target, label: 'Objetivo Financeiro', value: userProfile?.financial_goal?.replace('_', ' ') || 'Não definido', isSelect: true, options: [{ value: 'save_more', label: 'Poupar Mais' }, { value: 'reduce_debt', label: 'Reduzir Dívidas' }, { value: 'invest', label: 'Começar a Investir' }, { value: 'emergency_fund', label: 'Criar Fundo de Emergência' }, { value: 'retirement', label: 'Planear Reforma' }], onSelect: handleUpdateGoal }
+        ]
+      },
+      {
+        title: 'Integração Bancária',
+        items: [{ icon: Building2, label: 'Conexão com Banco', value: userProfile?.bank_connected ? `Conectado (${userProfile.bank_provider})` : 'Não conectado', onClick: () => !userProfile?.bank_connected && setShowBankModal(true), showDisconnect: userProfile?.bank_connected, onDisconnect: handleDisconnectBank, locked: plan === 'free_trial' }]
+      },
+    ] : []),
     {
       title: 'Preferências',
       items: [{ icon: Bell, label: 'Notificações', isToggle: true, value: userProfile?.notifications_enabled ?? true, onToggle: handleToggleNotifications }]
@@ -262,6 +281,23 @@ export default function Settings() {
                   );
                 }
 
+                if (item.locked) {
+                  return (
+                    <div key={item.label} className="flex items-center justify-between p-4 opacity-60">
+                      <div className="flex items-center gap-3">
+                        <div className="rounded-xl bg-slate-100 p-2"><Icon className="h-5 w-5 text-slate-400" /></div>
+                        <div>
+                          <span className="font-medium text-slate-500">{item.label}</span>
+                          <p className="text-xs text-slate-400">Disponível nos planos pagos</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">
+                        <Lock className="w-3 h-3" /> Bloqueado
+                      </div>
+                    </div>
+                  );
+                }
+
                 if (item.showDisconnect) {
                   return (
                     <div key={item.label} className="p-4">
@@ -301,32 +337,128 @@ export default function Settings() {
         ))}
 
         {/* Plano activo */}
-        {planInfo && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-            <h3 className="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">Subscrição</h3>
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className={`rounded-xl p-2 ${plan === 'free_trial' ? 'bg-slate-100' : plan === 'premium' ? 'bg-blue-100' : plan === 'premium_plus' ? 'bg-violet-100' : 'bg-amber-100'}`}>
-                    <Crown className={`h-5 w-5 ${plan === 'free_trial' ? 'text-slate-600' : plan === 'premium' ? 'text-blue-700' : plan === 'premium_plus' ? 'text-violet-700' : 'text-amber-600'}`} />
+        {planInfo && (() => {
+          const fmtRenewal = renewalDate
+            ? new Date(renewalDate + 'T12:00:00').toLocaleDateString('pt-PT')
+            : null;
+
+          return (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+              <h3 className="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">Subscrição</h3>
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-3">
+                    <div className={`rounded-xl p-2 ${plan === 'free_trial' ? 'bg-slate-100' : plan === 'premium' ? 'bg-blue-100' : plan === 'premium_plus' ? 'bg-violet-100' : 'bg-amber-100'}`}>
+                      <Crown className={`h-5 w-5 ${plan === 'free_trial' ? 'text-slate-600' : plan === 'premium' ? 'text-blue-700' : plan === 'premium_plus' ? 'text-violet-700' : 'text-amber-600'}`} />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-800">{planInfo.name}</p>
+                      <p className="text-xs text-slate-400">
+                        {planInfo.price ? `€${planInfo.price}/mês` : 'Grátis por 2 meses'}
+                        {fmtRenewal && ` · até ${fmtRenewal}`}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-slate-800">{planInfo.name}</p>
-                    <p className="text-xs text-slate-400">
-                      {planInfo.price ? `€${planInfo.price}/mês` : 'Grátis por 2 meses'}
-                      {planProfile?.plan_started_at && ` · desde ${new Date(planProfile.plan_started_at + 'T12:00:00').toLocaleDateString('pt-PT')}`}
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${plan === 'free_trial' ? 'bg-slate-100 text-slate-600' : plan === 'premium' ? 'bg-blue-100 text-blue-700' : plan === 'premium_plus' ? 'bg-violet-100 text-violet-700' : 'bg-amber-100 text-amber-700'}`}>
+                    {planInfo.badge}
+                  </span>
+                </div>
+
+                {/* Cancelled state banner + reactivate */}
+                {isCancelled && (
+                  <div className="mt-3 space-y-3">
+                    <p className="text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2">
+                      Subscrição cancelada — terás acesso até <strong>{fmtRenewal}</strong>.
                     </p>
+                    <Button
+                      onClick={async () => {
+                        setIsReactivating(true);
+                        await reactivateSubscription();
+                        setIsReactivating(false);
+                      }}
+                      disabled={isReactivating}
+                      className="w-full h-12 rounded-xl border border-blue-200 bg-white text-blue-700 hover:bg-blue-100 hover:border-blue-300 font-medium text-sm transition-colors"
+                    >
+                      {isReactivating
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : 'Reativar subscrição'}
+                    </Button>
+                  </div>
+                )}
+
+                <div className="mt-3 flex flex-col gap-2">
+                  {!isCancelled && (
+                    <button onClick={() => navigate('/PlanSelection')}
+                      className="w-full py-2.5 rounded-xl border border-blue-200 text-blue-700 text-sm font-medium hover:bg-blue-50 transition-colors flex items-center justify-center gap-2">
+                      <ChevronRight className="w-4 h-4" />
+                      Mudar Plano
+                    </button>
+                  )}
+
+                  {/* Cancel link — hidden if already cancelled or free trial */}
+                  {!isCancelled && plan !== 'free_trial' && (
+                    <button
+                      onClick={() => setShowCancelDialog(true)}
+                      className="text-xs text-slate-400 underline hover:text-rose-500 transition-colors text-left mt-1"
+                    >
+                      Cancelar subscrição
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          );
+        })()}
+
+        {/* Business Resources */}
+        {isBusiness && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
+            <h3 className="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">Recursos Business</h3>
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 divide-y divide-slate-100">
+
+              {/* API Access */}
+              <div className="p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="rounded-xl bg-amber-100 p-2"><Code2 className="h-5 w-5 text-amber-700" /></div>
+                  <div>
+                    <p className="font-medium text-slate-800">Acesso API</p>
+                    <p className="text-xs text-slate-400">Integra o WiseMoney nos teus sistemas</p>
                   </div>
                 </div>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${plan === 'free_trial' ? 'bg-slate-100 text-slate-600' : plan === 'premium' ? 'bg-blue-100 text-blue-700' : plan === 'premium_plus' ? 'bg-violet-100 text-violet-700' : 'bg-amber-100 text-amber-700'}`}>
-                  {planInfo.badge}
-                </span>
+                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5">
+                  <code className="flex-1 text-xs text-slate-600 font-mono truncate">{apiKey}</code>
+                  <button onClick={handleCopyApiKey} className="shrink-0 text-slate-400 hover:text-amber-600 transition-colors">
+                    {apiKeyCopied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
-              <button onClick={() => navigate('/PlanSelection')}
-                className="w-full py-2.5 rounded-xl border border-blue-200 text-blue-700 text-sm font-medium hover:bg-blue-50 transition-colors flex items-center justify-center gap-2">
-                <ChevronRight className="w-4 h-4" />
-                Mudar Plano
+
+              {/* Support 24/7 */}
+              <button onClick={() => setShowSupportDialog(true)}
+                className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-xl bg-amber-100 p-2"><HeadphonesIcon className="h-5 w-5 text-amber-700" /></div>
+                  <div className="text-left">
+                    <p className="font-medium text-slate-800">Suporte Dedicado 24/7</p>
+                    <p className="text-xs text-slate-400">Fala com a nossa equipa a qualquer hora</p>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
               </button>
+
+              {/* Onboarding */}
+              <button onClick={() => setShowOnboardingDialog(true)}
+                className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-xl bg-amber-100 p-2"><CalendarCheck className="h-5 w-5 text-amber-700" /></div>
+                  <div className="text-left">
+                    <p className="font-medium text-slate-800">Onboarding Personalizado</p>
+                    <p className="text-xs text-slate-400">Sessão de configuração com um especialista</p>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
+              </button>
+
             </div>
           </motion.div>
         )}
@@ -335,14 +467,29 @@ export default function Settings() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <h3 className="text-xs font-semibold text-slate-500 mb-3 uppercase tracking-wide">Dados</h3>
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
-            <button onClick={() => { setExportError(''); setShowExportDialog(true); }}
-              className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors rounded-2xl">
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-slate-100 p-2"><Download className="h-5 w-5 text-slate-600" /></div>
-                <span className="font-medium text-slate-800">Exportar Transações</span>
+            {plan === 'free_trial' ? (
+              <div className="flex items-center justify-between p-4 opacity-60">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-xl bg-slate-100 p-2"><Download className="h-5 w-5 text-slate-400" /></div>
+                  <div>
+                    <span className="font-medium text-slate-500">Exportar Transações</span>
+                    <p className="text-xs text-slate-400">Disponível nos planos pagos</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full">
+                  <Lock className="w-3 h-3" /> Bloqueado
+                </div>
               </div>
-              <ChevronRight className="h-4 w-4 text-slate-400" />
-            </button>
+            ) : (
+              <button onClick={() => { setExportError(''); setShowExportDialog(true); }}
+                className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors rounded-2xl">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-xl bg-slate-100 p-2"><Download className="h-5 w-5 text-slate-600" /></div>
+                  <span className="font-medium text-slate-800">Exportar Transações</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-slate-400" />
+              </button>
+            )}
           </div>
         </motion.div>
 
@@ -362,6 +509,107 @@ export default function Settings() {
       </div>
 
       <BankConnectionModal isOpen={showBankModal} onClose={() => setShowBankModal(false)} onConnect={handleConnectBank} />
+
+      {/* Support dialog */}
+      <Dialog open={showSupportDialog} onOpenChange={setShowSupportDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HeadphonesIcon className="h-5 w-5 text-amber-600" />
+              Suporte Dedicado 24/7
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            {[
+              { label: 'Email prioritário', value: 'business@wisemoney.pt', sub: 'Resposta em menos de 2 horas' },
+              { label: 'WhatsApp Business', value: '+351 910 000 000', sub: 'Disponível 24h / 7 dias' },
+              { label: 'Videochamada', value: 'Agendar sessão', sub: 'Via Google Meet ou Zoom', onClick: () => { setShowSupportDialog(false); setShowOnboardingDialog(true); } },
+            ].map(item => (
+              <div key={item.label}
+                onClick={item.onClick}
+                className={`flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 ${item.onClick ? 'cursor-pointer hover:bg-amber-50 hover:border-amber-200 transition-colors' : ''}`}>
+                <div>
+                  <p className="text-sm font-medium text-slate-800">{item.label}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{item.sub}</p>
+                </div>
+                <span className="text-sm text-amber-700 font-medium">{item.value}</span>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Onboarding dialog */}
+      <Dialog open={showOnboardingDialog} onOpenChange={setShowOnboardingDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarCheck className="h-5 w-5 text-amber-600" />
+              Onboarding Personalizado
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-slate-600 leading-relaxed">
+              A nossa equipa irá configurar o WiseMoney Business de acordo com as necessidades específicas da tua empresa — departamentos, KPIs, integrações e fluxos de trabalho.
+            </p>
+            <div className="space-y-2">
+              {['Configuração inicial guiada', 'Importação de dados existentes', 'Formação da equipa (até 2h)', 'Revisão ao fim de 30 dias'].map(item => (
+                <div key={item} className="flex items-center gap-2 text-sm text-slate-700">
+                  <Check className="w-4 h-4 text-amber-600 shrink-0" />
+                  {item}
+                </div>
+              ))}
+            </div>
+            <Button
+              onClick={() => { window.open('mailto:onboarding@wisemoney.pt?subject=Onboarding%20Business', '_blank'); setShowOnboardingDialog(false); }}
+              className="w-full h-11 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-medium"
+            >
+              Agendar sessão
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel subscription dialog */}
+      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-rose-600">
+              <XCircle className="h-5 w-5" />
+              Cancelar Subscrição
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-slate-700 leading-relaxed">
+              Ao cancelar, continuarás a ter acesso ao <strong>{planInfo?.name}</strong> até{' '}
+              <strong>
+                {renewalDate
+                  ? new Date(renewalDate + 'T12:00:00').toLocaleDateString('pt-PT')
+                  : '—'}
+              </strong>
+              . A partir dessa data perderás acesso às funcionalidades do plano.
+            </p>
+            <p className="text-sm text-slate-500">Tens a certeza que queres cancelar?</p>
+            <div className="flex gap-3 pt-1">
+              <Button variant="outline" onClick={() => setShowCancelDialog(false)} className="flex-1 h-11 rounded-xl">
+                Manter plano
+              </Button>
+              <Button
+                onClick={async () => {
+                  setIsCancelling(true);
+                  await cancelSubscription();
+                  setIsCancelling(false);
+                  setShowCancelDialog(false);
+                }}
+                disabled={isCancelling}
+                className="flex-1 h-11 rounded-xl bg-rose-600 hover:bg-rose-700 text-white"
+              >
+                {isCancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Sim, cancelar'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
         <DialogContent className="sm:max-w-md">

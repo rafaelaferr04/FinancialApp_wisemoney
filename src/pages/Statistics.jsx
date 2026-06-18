@@ -50,7 +50,7 @@ export default function Statistics() {
 
   const { data: transactions = [] } = useQuery({
     queryKey: ['transactions', user?.email],
-    queryFn: () => user ? base44.entities.Transaction.filter({ created_by: user.email }, '-date', 1000) : [],
+    queryFn: () => user ? base44.entities.Transaction.filter({ created_by: user.email }, '-created_date', 1000) : [],
     enabled: !!user
   });
 
