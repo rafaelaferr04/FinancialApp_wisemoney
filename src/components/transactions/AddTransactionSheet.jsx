@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Plus, Minus, FileUp, Loader2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ const expenseCategories = [
   { value: 'other',         label: 'Outros',      emoji: '📦' },
 ];
 
-export default function AddTransactionSheet({ isOpen, onClose, onSave }) {
+export default function AddTransactionSheet({ isOpen, onClose, onSave, editTransaction = null }) {
   const [view, setView] = useState('form'); // 'form' or 'import'
   const [type, setType] = useState('expense');
   const [formData, setFormData] = useState({
@@ -43,6 +43,25 @@ export default function AddTransactionSheet({ isOpen, onClose, onSave }) {
   const [isImporting, setIsImporting] = useState(false);
   const [errors, setErrors] = useState({});
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (editTransaction) {
+      setType(editTransaction.type || 'expense');
+      setFormData({
+        title: editTransaction.title || '',
+        amount: editTransaction.amount != null ? String(editTransaction.amount) : '',
+        category: editTransaction.category || '',
+        date: editTransaction.date || new Date().toISOString().split('T')[0],
+        notes: editTransaction.notes || '',
+      });
+      setView('form');
+      setErrors({});
+    } else if (isOpen) {
+      setType('expense');
+      setFormData({ title: '', amount: '', category: '', date: new Date().toISOString().split('T')[0], notes: '' });
+      setErrors({});
+    }
+  }, [editTransaction, isOpen]);
 
   const categories = type === 'income' ? incomeCategories : expenseCategories;
 
@@ -59,13 +78,11 @@ export default function AddTransactionSheet({ isOpen, onClose, onSave }) {
     setErrors({});
     setIsSubmitting(true);
     const amount = Math.round(parseFloat(formData.amount) * 100) / 100;
-    await onSave({
-      ...formData,
-      type,
-      amount
-    });
+    await onSave({ ...formData, type, amount }, editTransaction?.id);
     setIsSubmitting(false);
-    setFormData({ title: '', amount: '', category: '', date: new Date().toISOString().split('T')[0], notes: '' });
+    if (!editTransaction) {
+      setFormData({ title: '', amount: '', category: '', date: new Date().toISOString().split('T')[0], notes: '' });
+    }
     onClose();
   };
 
@@ -156,14 +173,14 @@ export default function AddTransactionSheet({ isOpen, onClose, onSave }) {
             <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-slate-200" />
             
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-slate-800">Adicionar Transação</h2>
+              <h2 className="text-xl font-bold text-slate-800">{editTransaction ? 'Editar Transação' : 'Adicionar Transação'}</h2>
               <button onClick={onClose} className="rounded-full p-2 hover:bg-slate-100">
                 <X className="h-5 w-5 text-slate-500" />
               </button>
             </div>
 
-            {/* View Toggle — underline tabs */}
-            <div className="flex justify-center gap-10 border-b border-slate-200 mb-5">
+            {/* View Toggle — underline tabs (hidden when editing) */}
+            {!editTransaction && <div className="flex justify-center gap-10 border-b border-slate-200 mb-5">
               <button
                 type="button"
                 onClick={() => setView('form')}
@@ -187,9 +204,9 @@ export default function AddTransactionSheet({ isOpen, onClose, onSave }) {
                 <FileUp className="h-4 w-4" />
                 Importar
               </button>
-            </div>
+            </div>}
 
-            {view === 'import' ? (
+            {view === 'import' && !editTransaction ? (
               <div className="space-y-6">
                 <div className="rounded-2xl bg-blue-50 border-2 border-dashed border-blue-200 p-8 text-center">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-blue-700 text-white mb-4 shadow-lg shadow-blue-900/20">
@@ -354,7 +371,7 @@ export default function AddTransactionSheet({ isOpen, onClose, onSave }) {
                           : 'bg-rose-600 hover:bg-rose-700'
                       }`}
                     >
-                      {isSubmitting ? 'A guardar...' : `Adicionar ${type === 'income' ? 'Receita' : 'Despesa'}`}
+                      {isSubmitting ? 'A guardar...' : editTransaction ? 'Guardar Alterações' : `Adicionar ${type === 'income' ? 'Receita' : 'Despesa'}`}
                     </Button>
                   </div>
                 </form>

@@ -153,7 +153,10 @@ export default function BusinessDashboard() {
   }, [kpis, transactions, employees, currentMonth]);
 
   const kpisAtRisk = useMemo(() =>
-    kpis.filter(k => ['at_risk','failed'].includes(kpiStatus(k, calcKPICurrentValue(k, transactions, employees, currentMonth)))).slice(0, 4),
+    kpis.filter(k => {
+      const status = kpiStatus(k, calcKPICurrentValue(k, transactions, employees, currentMonth));
+      return ['at_risk','failed'].includes(status) && k.unit === '€' && k.direction === 'down';
+    }).slice(0, 4),
     [kpis, transactions, employees, currentMonth]);
 
   // ── 6-month chart ──────────────────────────────────────────────────────────
@@ -185,11 +188,15 @@ export default function BusinessDashboard() {
   // ── Dept budget ────────────────────────────────────────────────────────────
   const deptData = useMemo(() =>
     departments.map(dept => {
-      const spent  = transactions.filter(t => t.department === dept.name && t.date?.startsWith(currentMonth)).reduce((s, t) => s + (t.amount || 0), 0);
+      // Transaction costs this month tagged to this department (non-revenue)
+      const txCosts     = transactions.filter(t => t.department === dept.name && t.date?.startsWith(currentMonth) && t.type !== 'revenue').reduce((s, t) => s + (t.amount || 0), 0);
+      // Monthly salary of active employees in this department
+      const empSalaries = employees.filter(e => e.department === dept.name && e.status === 'active').reduce((s, e) => s + (e.salary || 0), 0);
+      const spent  = txCosts + empSalaries;
       const budget = dept.monthly_budget || dept.budget_monthly || 0;
-      return { name: dept.name, budget, spent, pct: budget > 0 ? Math.round((spent / budget) * 100) : 0 };
+      return { name: dept.name, budget, spent, txCosts, empSalaries, pct: budget > 0 ? Math.round((spent / budget) * 100) : 0 };
     }).filter(d => d.budget > 0).slice(0, 6),
-    [departments, transactions, currentMonth]);
+    [departments, transactions, employees, currentMonth]);
 
   const recentTx = useMemo(() => transactions.slice(0, 10), [transactions]);
 

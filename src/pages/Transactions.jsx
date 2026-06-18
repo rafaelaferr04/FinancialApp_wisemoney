@@ -32,6 +32,7 @@ const ALL_CATEGORIES = [
 
 export default function Transactions() {
   const [showAddTransaction, setShowAddTransaction] = useState(false);
+  const [editingTx, setEditingTx]                   = useState(null);
   const [showFilters, setShowFilters]               = useState(false);
   const [searchQuery, setSearchQuery]               = useState('');
   const [filterType, setFilterType]                 = useState('all');
@@ -58,6 +59,11 @@ export default function Transactions() {
 
   const deleteTransaction = useMutation({
     mutationFn: (id) => base44.entities.Transaction.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['transactions'] })
+  });
+
+  const updateTransaction = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Transaction.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['transactions'] })
   });
 
@@ -252,6 +258,7 @@ export default function Transactions() {
                         index={index}
                         showDelete={true}
                         onDelete={(id) => deleteTransaction.mutate(id)}
+                        onEdit={(tx) => { setEditingTx(tx); setShowAddTransaction(true); }}
                       />
                     ))}
                   </AnimatePresence>
@@ -265,7 +272,7 @@ export default function Transactions() {
       {/* FAB */}
       <motion.button
         whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-        onClick={() => setShowAddTransaction(true)}
+        onClick={() => { setEditingTx(null); setShowAddTransaction(true); }}
         className="fixed bottom-20 md:bottom-6 left-4 md:left-6 z-50 flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-2xl bg-blue-900 text-white shadow-lg shadow-blue-900/40 hover:bg-blue-950 transition-colors"
         title="Nova transação"
       >
@@ -274,8 +281,12 @@ export default function Transactions() {
 
       <AddTransactionSheet
         isOpen={showAddTransaction}
-        onClose={() => setShowAddTransaction(false)}
-        onSave={(data) => createTransaction.mutateAsync(data)}
+        onClose={() => { setShowAddTransaction(false); setEditingTx(null); }}
+        editTransaction={editingTx}
+        onSave={(data, id) => id
+          ? updateTransaction.mutateAsync({ id, data })
+          : createTransaction.mutateAsync(data)
+        }
       />
 
       {/* Advanced filter sheet */}

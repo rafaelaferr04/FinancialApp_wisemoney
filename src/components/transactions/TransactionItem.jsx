@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import {
   ShoppingBag, Utensils, Car, Home, Zap, Gamepad2, Heart,
-  GraduationCap, PiggyBank, Briefcase, Gift, TrendingUp, MoreHorizontal, Trash2
+  GraduationCap, PiggyBank, Briefcase, Gift, TrendingUp, MoreHorizontal, Trash2, Pencil
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -23,7 +23,7 @@ const categoryConfig = {
   other: { icon: MoreHorizontal, color: 'text-slate-600', bg: 'bg-slate-50', label: 'Outros' },
 };
 
-export default function TransactionItem({ transaction, index = 0, onDelete, showDelete = false }) {
+export default function TransactionItem({ transaction, index = 0, onDelete, showDelete = false, onEdit }) {
   const config = categoryConfig[transaction.category] || categoryConfig.other;
   const Icon = config.icon;
   const isIncome = transaction.type === 'income';
@@ -50,6 +50,14 @@ export default function TransactionItem({ transaction, index = 0, onDelete, show
         {isIncome ? '+' : '−'}€{Math.abs(transaction.amount).toLocaleString('pt-PT', { minimumFractionDigits: 2 })}
       </p>
 
+      {onEdit && (
+        <button
+          onClick={() => onEdit(transaction)}
+          className="p-1.5 rounded-lg text-slate-300 hover:text-blue-400 transition-colors shrink-0"
+        >
+          <Pencil className="h-4 w-4" />
+        </button>
+      )}
       {showDelete && onDelete && (
         <button
           onClick={() => onDelete(transaction.id)}

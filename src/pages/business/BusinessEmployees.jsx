@@ -46,10 +46,10 @@ function EmployeeModal({ isOpen, onClose, onSave, editEmp, departments }) {
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[75]" />
+        <div className="fixed inset-0 z-[75] flex items-start justify-center pt-4 sm:pt-10 px-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <motion.div initial={{ opacity: 0, scale: 0.96, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }}
-            className="fixed inset-4 sm:inset-auto sm:left-1/2 sm:-translate-x-1/2 sm:top-12 sm:w-full sm:max-w-lg z-[80] bg-white rounded-2xl shadow-2xl overflow-y-auto max-h-[85vh] p-5">
+            className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-y-auto max-h-[88vh] p-5 z-10">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-bold text-slate-800">{editEmp ? 'Editar Colaborador' : 'Novo Colaborador'}</h2>
               <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100"><X className="w-5 h-5 text-slate-500" /></button>
@@ -131,7 +131,7 @@ function EmployeeModal({ isOpen, onClose, onSave, editEmp, departments }) {
               </div>
             </div>
           </motion.div>
-        </>
+        </div>
       )}
     </AnimatePresence>
   );
@@ -158,10 +158,10 @@ function DeptModal({ isOpen, onClose, onSave, editDept }) {
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[75]" />
+        <div className="fixed inset-0 z-[75] flex items-center justify-center px-4">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <motion.div initial={{ opacity: 0, scale: 0.96, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }}
-            className="fixed inset-4 sm:inset-auto sm:left-1/2 sm:-translate-x-1/2 sm:top-1/4 sm:w-full sm:max-w-md z-[80] bg-white rounded-2xl shadow-2xl p-5">
+            className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl p-5 z-10">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-bold text-slate-800">{editDept ? 'Editar Departamento' : 'Novo Departamento'}</h2>
               <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100"><X className="w-5 h-5 text-slate-500" /></button>
@@ -178,7 +178,7 @@ function DeptModal({ isOpen, onClose, onSave, editDept }) {
               </div>
             </div>
           </motion.div>
-        </>
+        </div>
       )}
     </AnimatePresence>
   );

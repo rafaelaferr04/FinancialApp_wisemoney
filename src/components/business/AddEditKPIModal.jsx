@@ -96,11 +96,11 @@ export default function AddEditKPIModal({ isOpen, onClose, onSave, editKPI = nul
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
+        <div className="fixed inset-0 z-[75] flex items-start justify-center pt-4 sm:pt-8 px-4">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={onClose} className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[75]" />
+            onClick={onClose} className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
           <motion.div initial={{ opacity: 0, scale: 0.96, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }}
-            className="fixed inset-4 sm:inset-auto sm:left-1/2 sm:-translate-x-1/2 sm:top-8 sm:w-full sm:max-w-lg z-[80] bg-white rounded-2xl shadow-2xl overflow-y-auto max-h-[90vh]">
+            className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-y-auto max-h-[90vh] z-10">
             <div className="p-5">
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-lg font-bold text-slate-800">{editKPI ? 'Editar KPI' : 'Novo KPI'}</h2>
@@ -209,7 +209,7 @@ export default function AddEditKPIModal({ isOpen, onClose, onSave, editKPI = nul
               </div>
             </div>
           </motion.div>
-        </>
+        </div>
       )}
     </AnimatePresence>
   );

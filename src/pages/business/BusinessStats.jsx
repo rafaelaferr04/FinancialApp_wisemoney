@@ -77,18 +77,22 @@ export default function BusinessStats() {
 
   // ── P&L per month ─────────────────────────────────────────────────────────
   const plMonths = useMemo(() => months.map(m => {
-    const rev      = transactions.filter(t => t.type === 'revenue'    && t.date?.startsWith(m.key)).reduce((s, t) => s + (t.amount || 0), 0);
-    const salaries = transactions.filter(t => t.category === 'salaries' && t.date?.startsWith(m.key)).reduce((s, t) => s + (t.amount || 0), 0);
+    const rev     = transactions.filter(t => t.type === 'revenue'   && t.date?.startsWith(m.key)).reduce((s, t) => s + (t.amount || 0), 0);
+    // Salaries: only employees hired on or before end of this month
+    const salaries = employees
+      .filter(e => e.status === 'active' && (!e.hire_date || e.hire_date.slice(0, 7) <= m.key))
+      .reduce((s, e) => s + (e.salary || 0), 0);
+    // OpCosts = ALL cost transactions (excluding 'salaries' category to avoid double-counting)
     const opCosts  = transactions.filter(t => t.type === 'cost' && t.category !== 'salaries' && t.date?.startsWith(m.key)).reduce((s, t) => s + (t.amount || 0), 0);
-    const invest   = transactions.filter(t => t.type === 'investment'  && t.date?.startsWith(m.key)).reduce((s, t) => s + (t.amount || 0), 0);
-    const taxes    = transactions.filter(t => t.type === 'tax'         && t.date?.startsWith(m.key)).reduce((s, t) => s + (t.amount || 0), 0);
+    const invest   = transactions.filter(t => t.type === 'investment' && t.date?.startsWith(m.key)).reduce((s, t) => s + (t.amount || 0), 0);
+    const taxes    = transactions.filter(t => t.type === 'tax'        && t.date?.startsWith(m.key)).reduce((s, t) => s + (t.amount || 0), 0);
     const costs    = salaries + opCosts;
     const gross    = rev - costs;
     const ebitda   = gross - invest;
     const net      = ebitda - taxes;
     const margin   = rev > 0 ? Math.round((gross / rev) * 10) / 10 : 0;
     return { month: m.label, rev, salaries, opCosts, invest, taxes, costs, gross, ebitda, net, margin };
-  }), [transactions, months]);
+  }), [transactions, months, employees]);
 
   const totPL = useMemo(() => plMonths.reduce((acc, m) => ({
     rev: acc.rev + m.rev, salaries: acc.salaries + m.salaries, opCosts: acc.opCosts + m.opCosts,
@@ -150,11 +154,19 @@ export default function BusinessStats() {
   }, [employees]);
 
   const deptData = useMemo(() => departments.map(d => {
-    const spent  = months.reduce((tot, m) =>
-      tot + transactions.filter(t => t.department === d.name && t.date?.startsWith(m.key) && t.type !== 'revenue').reduce((s, t) => s + (t.amount || 0), 0), 0);
-    const budget = (d.budget_monthly || 0) * monthCount;
+    // Transaction costs tagged to this department (non-revenue)
+    const txCosts = months.reduce((tot, m) =>
+      tot + transactions.filter(t => t.department === d.name && t.date?.startsWith(m.key) && t.type !== 'revenue')
+        .reduce((s, t) => s + (t.amount || 0), 0), 0);
+    // Salary costs: sum per month, only employees hired by that month
+    const empSalaries = months.reduce((tot, m) =>
+      tot + employees
+        .filter(e => e.department === d.name && e.status === 'active' && (!e.hire_date || e.hire_date.slice(0, 7) <= m.key))
+        .reduce((s, e) => s + (e.salary || 0), 0), 0);
+    const spent    = txCosts + empSalaries;
+    const budget   = (d.budget_monthly || 0) * monthCount;
     const empCount = employees.filter(e => e.department === d.name && e.status === 'active').length;
-    return { name: d.name, budget, spent, pct: budget > 0 ? Math.round((spent / budget) * 100) : 0, empCount };
+    return { name: d.name, budget, spent, txCosts, empSalaries, pct: budget > 0 ? Math.round((spent / budget) * 100) : 0, empCount };
   }), [departments, transactions, months, employees, monthCount]);
 
   // ── Financial ratios ──────────────────────────────────────────────────────
@@ -621,22 +633,37 @@ export default function BusinessStats() {
                   <h3 className="font-semibold text-slate-700 text-sm">Detalhe por Departamento — {monthCount} meses</h3>
                 </div>
                 {deptData.map(d => (
-                  <div key={d.name} className="flex items-center gap-4 px-5 py-3 border-b border-slate-50 last:border-0">
-                    <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
-                      <Building2 className="w-4 h-4 text-amber-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-800">{d.name}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${d.pct > 100 ? 'bg-red-500' : d.pct > 80 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(d.pct, 100)}%` }} />
+                  <div key={d.name} className="px-5 py-3 border-b border-slate-50 last:border-0">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+                        <Building2 className="w-4 h-4 text-amber-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-semibold text-slate-800">{d.name}</p>
+                          <span className={`text-xs font-bold ${d.pct > 100 ? 'text-red-600' : d.pct > 80 ? 'text-amber-600' : 'text-emerald-600'}`}>{d.pct}% do orçamento</span>
                         </div>
-                        <span className={`text-xs font-bold shrink-0 ${d.pct > 100 ? 'text-red-600' : d.pct > 80 ? 'text-amber-600' : 'text-emerald-600'}`}>{d.pct}%</span>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${d.pct > 100 ? 'bg-red-500' : d.pct > 80 ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(d.pct, 100)}%` }} />
+                          </div>
+                          <span className="text-xs text-slate-500 shrink-0">{fmtMoney(d.spent)} / {fmtMoney(d.budget)}</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-bold text-slate-800">{fmtMoney(d.spent)}</p>
-                      <p className="text-xs text-slate-400">de {fmtMoney(d.budget)}</p>
+                    {/* Breakdown: salaries vs transaction costs */}
+                    <div className="ml-11 flex gap-3">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />
+                        <span className="text-[10px] text-slate-500">Salários: <span className="font-semibold text-slate-700">{fmtMoney(d.empSalaries)}</span></span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-orange-400 shrink-0" />
+                        <span className="text-[10px] text-slate-500">Transações: <span className="font-semibold text-slate-700">{fmtMoney(d.txCosts)}</span></span>
+                      </div>
+                      <div className="flex items-center gap-1.5 ml-auto">
+                        <span className="text-[10px] text-slate-400">{d.empCount} colaboradores</span>
+                      </div>
                     </div>
                   </div>
                 ))}

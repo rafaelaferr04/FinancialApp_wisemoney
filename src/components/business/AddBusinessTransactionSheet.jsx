@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -35,10 +35,33 @@ const empty = () => ({
   date: new Date().toISOString().split('T')[0], notes: '',
 });
 
-export default function AddBusinessTransactionSheet({ isOpen, onClose, onSave, departments = [] }) {
+export default function AddBusinessTransactionSheet({ isOpen, onClose, onSave, departments = [], editTransaction = null }) {
   const [form, setForm] = useState(empty());
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    if (editTransaction) {
+      setForm({
+        title:          editTransaction.title          || '',
+        amount:         editTransaction.amount != null ? String(editTransaction.amount) : '',
+        type:           editTransaction.type           || 'cost',
+        category:       editTransaction.category       || '',
+        department:     editTransaction.department     || '',
+        project:        editTransaction.project        || '',
+        entity_name:    editTransaction.entity_name    || '',
+        invoice_number: editTransaction.invoice_number || '',
+        payment_method: editTransaction.payment_method || 'transfer',
+        status:         editTransaction.status         || 'approved',
+        date:           editTransaction.date           || new Date().toISOString().split('T')[0],
+        notes:          editTransaction.notes          || '',
+      });
+      setErrors({});
+    } else if (isOpen) {
+      setForm(empty());
+      setErrors({});
+    }
+  }, [editTransaction, isOpen]);
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
@@ -56,10 +79,9 @@ export default function AddBusinessTransactionSheet({ isOpen, onClose, onSave, d
   const handleSave = async () => {
     if (!validate()) return;
     setSaving(true);
-    await onSave({ ...form, amount: Math.abs(parseFloat(form.amount)) });
+    await onSave({ ...form, amount: Math.abs(parseFloat(form.amount)) }, editTransaction?.id);
     setSaving(false);
-    setForm(empty());
-    setErrors({});
+    if (!editTransaction) { setForm(empty()); setErrors({}); }
     onClose();
   };
 
