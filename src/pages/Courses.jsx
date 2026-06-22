@@ -369,7 +369,7 @@ export default function Courses() {
           </div>
 
           {/* Body */}
-          <div className="p-5 max-h-[70vh] overflow-y-auto">
+          <div className="p-5 min-h-[360px] max-h-[58vh] overflow-y-auto">
             {currentLesson && (
               <AnimatePresence mode="wait">
                 <motion.div key={learnLessonIndex} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
@@ -428,7 +428,7 @@ export default function Courses() {
           </div>
 
           {/* Body */}
-          <div className="p-5">
+          <div className="p-5 min-h-[360px] max-h-[58vh] overflow-y-auto">
             {!quizSubmitted && currentQuestion ? (
               <AnimatePresence mode="wait">
                 <motion.div key={quizQIndex} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
