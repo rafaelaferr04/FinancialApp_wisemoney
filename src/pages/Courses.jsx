@@ -20,7 +20,7 @@ const LEVEL_META = {
   3: { label: 'Avançado',     color: 'text-purple-700', bg: 'bg-purple-100', dot: 'bg-purple-500', badge: 'bg-purple-100 text-purple-700' },
 };
 
-function CourseCard({ course, unlocked, progress, onQuiz }) {
+function CourseCard({ course, unlocked, progress, onLearn, onQuiz }) {
   const lessonsCompleted = progress?.lessons_completed?.length || 0;
   const progressPct = course.lessons.length > 0 ? (lessonsCompleted / course.lessons.length) * 100 : 0;
   const completed = !!progress?.completed;
@@ -72,13 +72,13 @@ function CourseCard({ course, unlocked, progress, onQuiz }) {
 
       {unlocked && (
         <div className="flex gap-1.5 mt-auto pt-1">
-          <Link
-            to={createPageUrl(`CourseDetail?id=${course.id}&mode=learn`)}
+          <button
+            onClick={() => onLearn(course.id)}
             className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 font-medium text-slate-700 transition-colors text-xs sm:text-sm"
           >
             <BookOpen className="h-3.5 w-3.5 shrink-0" />
             Aprender
-          </Link>
+          </button>
           <button
             onClick={() => onQuiz(course.id)}
             className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-xl bg-blue-700 hover:bg-blue-800 font-medium text-white transition-colors text-xs sm:text-sm"
@@ -99,6 +99,8 @@ export default function Courses() {
   const [quizQIndex, setQuizQIndex] = useState(0);
   const [quizAnswers, setQuizAnswers] = useState({});
   const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [learnCourseId, setLearnCourseId] = useState(null);
+  const [learnLessonIndex, setLearnLessonIndex] = useState(0);
   const queryClient = useQueryClient();
 
   useEffect(() => { base44.auth.me().then(setUser); }, []);
@@ -161,6 +163,31 @@ export default function Courses() {
     setQuizSubmitted(false);
   };
   const closeQuiz = () => setQuizCourseId(null);
+
+  // Learn dialog
+  const learnCourse   = learnCourseId ? ALL_COURSES.find(c => c.id === learnCourseId) : null;
+  const learnContent  = learnCourseId ? COURSES_CONTENT[learnCourseId] : null;
+  const learnLessons  = learnContent?.lessons || [];
+  const currentLesson = learnLessons[learnLessonIndex];
+
+  const openLearn = (courseId) => {
+    setLearnCourseId(courseId);
+    setLearnLessonIndex(0);
+  };
+  const closeLearn = () => setLearnCourseId(null);
+
+  const markLessonComplete = async (lessonId) => {
+    const prog = progressMap[learnCourseId];
+    const newCompleted = [...new Set([...(prog?.lessons_completed || []), lessonId])];
+    if (prog) {
+      await updateProgress.mutateAsync({ id: prog.id, data: { lessons_completed: newCompleted } });
+    } else {
+      await createProgress.mutateAsync({
+        course_id: learnCourseId, level: learnCourse?.level || 1,
+        lessons_completed: newCompleted, completed: false, xp_earned: 0,
+      });
+    }
+  };
 
   const handleQuizSubmit = async () => {
     setQuizSubmitted(true);
@@ -308,6 +335,7 @@ export default function Courses() {
                       course={course}
                       unlocked={isCourseUnlocked(course)}
                       progress={progressMap[course.id]}
+                      onLearn={openLearn}
                       onQuiz={openQuiz}
                     />
                   </motion.div>
@@ -317,6 +345,69 @@ export default function Courses() {
           );
         })}
       </div>
+
+      {/* Learn Dialog */}
+      <Dialog open={!!learnCourseId} onOpenChange={(open) => { if (!open) closeLearn(); }}>
+        <DialogContent className="p-0 overflow-hidden max-w-md rounded-2xl [&>button]:hidden gap-0">
+
+          {/* Blue header */}
+          <div className="bg-blue-700 px-5 py-4 flex items-center gap-3">
+            <img src={logoImg} alt="WiseMoney" className="h-8 w-8 rounded-lg object-cover shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-bold truncate">{learnCourse?.title}</p>
+              <p className="text-blue-200 text-sm">Lição {learnLessonIndex + 1} de {learnLessons.length}</p>
+            </div>
+            <button onClick={closeLearn} className="text-white/70 hover:text-white transition shrink-0">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Progress bar */}
+          <div className="h-1 bg-blue-900">
+            <div className="h-full bg-blue-300 transition-all duration-500"
+              style={{ width: `${((learnLessonIndex + 1) / Math.max(learnLessons.length, 1)) * 100}%` }} />
+          </div>
+
+          {/* Body */}
+          <div className="p-5 max-h-[70vh] overflow-y-auto">
+            {currentLesson && (
+              <AnimatePresence mode="wait">
+                <motion.div key={learnLessonIndex} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
+                  <h2 className="text-lg font-bold text-slate-800 mb-4">{currentLesson.title}</h2>
+                  <div className="text-sm text-slate-600 leading-relaxed space-y-3">
+                    {currentLesson.content?.split('\n').map((para, i) => (
+                      <p key={i} className="whitespace-pre-line">
+                        {para.split('**').map((part, j) =>
+                          j % 2 === 1 ? <strong key={j} className="text-slate-800">{part}</strong> : part
+                        )}
+                      </p>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 flex gap-3">
+                    {learnLessonIndex > 0 && (
+                      <Button variant="outline" onClick={() => setLearnLessonIndex(i => i - 1)} className="h-11 px-4 rounded-xl">
+                        ← Anterior
+                      </Button>
+                    )}
+                    {learnLessonIndex < learnLessons.length - 1 ? (
+                      <Button onClick={() => { markLessonComplete(currentLesson.id); setLearnLessonIndex(i => i + 1); }}
+                        className="flex-1 h-11 bg-blue-700 hover:bg-blue-800 rounded-xl">
+                        Próxima Lição <ChevronRight className="ml-1 h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <Button onClick={() => { markLessonComplete(currentLesson.id); closeLearn(); openQuiz(learnCourseId); }}
+                        className="flex-1 h-11 bg-blue-700 hover:bg-blue-800 rounded-xl">
+                        <Gamepad2 className="mr-2 h-4 w-4" /> Fazer Quiz (+XP)
+                      </Button>
+                    )}
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Quiz Dialog */}
       <Dialog open={!!quizCourseId} onOpenChange={(open) => { if (!open) closeQuiz(); }}>
