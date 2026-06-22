@@ -1,10 +1,9 @@
 import { supabase, createEntityManager } from './localDb';
 import * as XLSX from 'xlsx';
 import * as pdfjs from 'pdfjs-dist';
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url
-).toString();
+import pdfjsWorkerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
+pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorkerSrc;
 
 export const base44 = {
   auth: {
@@ -160,7 +159,7 @@ Responde APENAS com este JSON: {"transactions": [{"description": "...", "amount"
           for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const content = await page.getTextContent();
-            pages.push(content.items.map(item => item.str).join(' '));
+            pages.push(content.items.filter(item => 'str' in item).map(item => item.str).join(' '));
           }
           return sendToGroq(pages.join('\n'));
         }
