@@ -24,7 +24,7 @@ function EmployeeModal({ isOpen, onClose, onSave, editEmp, departments }) {
 
   React.useEffect(() => {
     if (editEmp) {
-      setForm({ name: editEmp.name || '', role: editEmp.role || '', department: editEmp.department || '', hire_date: editEmp.hire_date || '', salary: editEmp.salary ?? '', status: editEmp.status || 'active', satisfaction_score: editEmp.satisfaction_score ?? '', courses_completed: editEmp.courses_completed || 0 });
+      setForm({ name: editEmp.name || '', role: editEmp.role || '', department: editEmp.department || '', hire_date: editEmp.hire_date || '', salary: editEmp.salary != null ? String(editEmp.salary) : '', status: editEmp.status || 'active', satisfaction_score: editEmp.satisfaction_score != null ? String(editEmp.satisfaction_score) : '', courses_completed: editEmp.courses_completed || 0 });
     } else {
       setForm(empty());
       setBizUsername('');
@@ -94,11 +94,11 @@ function EmployeeModal({ isOpen, onClose, onSave, editEmp, departments }) {
                 </div>
                 <div>
                   <Label>Salário Bruto Mensal (€)</Label>
-                  <Input type="number" value={form.salary} onChange={e => set('salary', e.target.value)} placeholder="0.00" className="mt-1.5 h-11 rounded-xl" />
+                  <Input type="number" value={form.salary} onChange={e => set('salary', e.target.value)} onWheel={e => e.target.blur()} placeholder="0.00" className="mt-1.5 h-11 rounded-xl [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                 </div>
                 <div>
                   <Label>Score de Satisfação (0–5)</Label>
-                  <Input type="number" min="0" max="5" step="0.1" value={form.satisfaction_score} onChange={e => set('satisfaction_score', e.target.value)} placeholder="Ex: 4.2" className="mt-1.5 h-11 rounded-xl" />
+                  <Input type="number" min="0" max="5" step="0.1" value={form.satisfaction_score} onChange={e => set('satisfaction_score', e.target.value)} onWheel={e => e.target.blur()} placeholder="Ex: 4.2" className="mt-1.5 h-11 rounded-xl [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                 </div>
               </div>
 
@@ -172,7 +172,7 @@ function DeptModal({ isOpen, onClose, onSave, editDept }) {
   const [saving, setSaving] = useState(false);
 
   React.useEffect(() => {
-    setForm(editDept ? { name: editDept.name || '', budget_monthly: editDept.budget_monthly ?? '', manager: editDept.manager || '' } : empty());
+    setForm(editDept ? { name: editDept.name || '', budget_monthly: editDept.budget_monthly != null ? String(editDept.budget_monthly) : '', manager: editDept.manager || '' } : empty());
   }, [editDept, isOpen]);
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
@@ -197,7 +197,7 @@ function DeptModal({ isOpen, onClose, onSave, editDept }) {
             <div className="space-y-4">
               <div><Label>Nome *</Label><Input value={form.name} onChange={e => set('name', e.target.value)} placeholder="Ex: Marketing" className="mt-1.5 h-11 rounded-xl" /></div>
               <div><Label>Gestor Responsável</Label><Input value={form.manager} onChange={e => set('manager', e.target.value)} placeholder="Nome do responsável" className="mt-1.5 h-11 rounded-xl" /></div>
-              <div><Label>Orçamento Mensal (€)</Label><Input type="number" value={form.budget_monthly} onChange={e => set('budget_monthly', e.target.value)} placeholder="0.00" className="mt-1.5 h-11 rounded-xl" /></div>
+              <div><Label>Orçamento Mensal (€)</Label><Input type="number" value={form.budget_monthly} onChange={e => set('budget_monthly', e.target.value)} onWheel={e => e.target.blur()} placeholder="0.00" className="mt-1.5 h-11 rounded-xl [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" /></div>
               <div className="flex gap-3 pt-2">
                 <button onClick={onClose} className="flex-1 h-11 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50">Cancelar</button>
                 <Button onClick={handleSave} disabled={saving} className="flex-1 h-11 rounded-xl bg-amber-600 hover:bg-amber-700 font-semibold">

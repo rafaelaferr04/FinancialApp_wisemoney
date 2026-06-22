@@ -130,7 +130,7 @@ export default function AddBusinessTransactionSheet({ isOpen, onClose, onSave, d
                     <Label className="text-slate-700">Valor (€) *</Label>
                     <Input type="number" step="0.01" min="0" value={form.amount}
                       onChange={e => set('amount', e.target.value)} onWheel={e => e.target.blur()}
-                      placeholder="0.00" className={`mt-1.5 h-11 rounded-xl ${errors.amount ? 'border-rose-400' : ''}`} />
+                      placeholder="0.00" className={`mt-1.5 h-11 rounded-xl [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${errors.amount ? 'border-rose-400' : ''}`} />
                     {errors.amount && <p className="text-xs text-rose-500 mt-1">{errors.amount}</p>}
                   </div>
                   <div>

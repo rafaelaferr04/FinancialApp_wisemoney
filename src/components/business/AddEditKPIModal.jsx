@@ -58,8 +58,8 @@ export default function AddEditKPIModal({ isOpen, onClose, onSave, editKPI = nul
         description: editKPI.description || '',
         category: editKPI.category || 'financial',
         unit: editKPI.unit || '€',
-        target_value: editKPI.target_value ?? '',
-        current_value: editKPI.current_value ?? '',
+        target_value: editKPI.target_value != null ? String(editKPI.target_value) : '',
+        current_value: editKPI.current_value != null ? String(editKPI.current_value) : '',
         direction: editKPI.direction || 'up',
         data_source: editKPI.data_source || 'manual',
         period: editKPI.period || 'monthly',
@@ -140,8 +140,8 @@ export default function AddEditKPIModal({ isOpen, onClose, onSave, editKPI = nul
                 <div className="grid grid-cols-3 gap-3">
                   <div className="col-span-1">
                     <Label className="text-slate-700">Objetivo *</Label>
-                    <Input type="number" step="any" value={form.target_value} onChange={e => set('target_value', e.target.value)}
-                      placeholder="Ex: 200000" className={`mt-1.5 h-11 rounded-xl ${errors.target_value ? 'border-rose-400' : ''}`} />
+                    <Input type="number" step="any" value={form.target_value} onChange={e => set('target_value', e.target.value)} onWheel={e => e.target.blur()}
+                      placeholder="Ex: 200000" className={`mt-1.5 h-11 rounded-xl [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${errors.target_value ? 'border-rose-400' : ''}`} />
                     {errors.target_value && <p className="text-xs text-rose-500 mt-1">{errors.target_value}</p>}
                   </div>
                   <div>
@@ -177,8 +177,8 @@ export default function AddEditKPIModal({ isOpen, onClose, onSave, editKPI = nul
                 {form.data_source === 'manual' && (
                   <div>
                     <Label className="text-slate-700">Valor atual</Label>
-                    <Input type="number" step="any" value={form.current_value} onChange={e => set('current_value', e.target.value)}
-                      placeholder="Valor actual do KPI" className="mt-1.5 h-11 rounded-xl" />
+                    <Input type="number" step="any" value={form.current_value} onChange={e => set('current_value', e.target.value)} onWheel={e => e.target.blur()}
+                      placeholder="Valor actual do KPI" className="mt-1.5 h-11 rounded-xl [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none" />
                   </div>
                 )}
 
